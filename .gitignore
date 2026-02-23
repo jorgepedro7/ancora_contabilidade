@@ -173,3 +173,5 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+PROMPT_ANCORA_CLI.md 
