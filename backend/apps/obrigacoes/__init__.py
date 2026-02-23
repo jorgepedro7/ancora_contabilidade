@@ -1,0 +1,1 @@
+# backend/apps/obrigacoes/__init__.py

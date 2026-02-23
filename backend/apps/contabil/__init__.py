@@ -1,0 +1,1 @@
+# backend/apps/contabil/__init__.py

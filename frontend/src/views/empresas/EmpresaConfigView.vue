@@ -1,0 +1,205 @@
+<template>
+  <div class="p-4 max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-display text-ancora-gold">Configurações Fiscais</h1>
+      <router-link to="/empresas" class="text-sm text-gray-400 hover:text-ancora-gold transition-colors">
+        &larr; Voltar para Empresas
+      </router-link>
+    </div>
+
+    <div v-if="loading" class="text-center py-10">
+      <p class="text-gray-400 animate-pulse">Carregando configurações...</p>
+    </div>
+
+    <div v-else-if="empresa" class="space-y-6">
+      <!-- Card da Empresa -->
+      <div class="bg-ancora-navy/30 border border-ancora-gold/20 p-6 rounded-lg shadow-xl">
+        <h2 class="text-xl font-display text-ancora-gold mb-4">Dados da Empresa</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <span class="text-gray-500 block uppercase text-xs font-bold">Razão Social</span>
+            <span class="text-white text-lg">{{ empresa.razao_social }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 block uppercase text-xs font-bold">CNPJ</span>
+            <span class="text-white text-lg">{{ formatCnpj(empresa.cnpj) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Certificado Digital -->
+      <div class="bg-ancora-navy/30 border border-ancora-gold/20 p-6 rounded-lg shadow-xl">
+        <h3 class="text-xl font-display text-ancora-gold mb-4 flex items-center">
+          <span class="mr-2">🔐</span> Certificado Digital (.A1 / .PFX)
+        </h3>
+        
+        <div v-if="empresa.certificado_data_validade" class="mb-4 p-3 border rounded border-green-500/30 bg-green-500/10 flex items-center justify-between">
+          <div>
+            <p class="text-sm text-green-400">Certificado configurado.</p>
+            <p class="text-xs text-gray-400">Validade: {{ formatDate(empresa.certificado_data_validade) }}</p>
+          </div>
+          <span v-if="empresa.certificado_vencido" class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">Expirado</span>
+        </div>
+        <div v-else class="mb-4 p-3 border rounded border-yellow-500/30 bg-yellow-500/10">
+          <p class="text-sm text-yellow-400">Certificado não configurado. Suba um arquivo .pfx para emitir notas fiscais.</p>
+        </div>
+
+        <form @submit.prevent="handleCertificateUpload" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-body text-gray-300 mb-1">Arquivo do Certificado (.pfx)</label>
+              <input type="file" @change="onFileChange" accept=".pfx"
+                     class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-ancora-gold file:text-ancora-black hover:file:bg-ancora-gold/80"/>
+            </div>
+            <div>
+              <label class="block text-sm font-body text-gray-300 mb-1">Senha do Certificado</label>
+              <input type="password" v-model="certData.password" required
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm focus:ring-ancora-gold focus:border-ancora-gold"/>
+            </div>
+          </div>
+          <button type="submit" :disabled="uploading"
+                  class="bg-ancora-navy border border-ancora-gold text-ancora-gold px-6 py-2 rounded shadow-md hover:bg-ancora-gold hover:text-ancora-black transition-all disabled:opacity-50">
+            {{ uploading ? 'Enviando...' : 'Salvar Certificado' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Configurações SEFAZ -->
+      <div v-if="empresa.configuracao_fiscal" class="bg-ancora-navy/30 border border-ancora-gold/20 p-6 rounded-lg shadow-xl">
+        <h3 class="text-xl font-display text-ancora-gold mb-4 flex items-center">
+          <span class="mr-2">⚙️</span> Ambiente e Numeração (SEFAZ)
+        </h3>
+        <form @submit.prevent="handleFiscalConfigUpdate" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-body text-gray-300 mb-1">Ambiente</label>
+            <select v-model="fiscalConfig.ambiente_sefaz" class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm">
+              <option value="1">Produção</option>
+              <option value="2">Homologação (Testes)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-body text-gray-300 mb-1">Série NF-e</label>
+            <input type="number" v-model="fiscalConfig.serie_nfe" class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+          </div>
+          <div>
+            <label class="block text-sm font-body text-gray-300 mb-1">Próxima NF-e</label>
+            <input type="number" v-model="fiscalConfig.ultimo_numero_nfe" class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+          </div>
+          <div class="md:col-span-3 mt-4">
+            <button type="submit" :disabled="savingConfig"
+                    class="bg-ancora-gold text-ancora-black px-6 py-2 rounded font-bold hover:bg-ancora-gold/80 transition-all disabled:opacity-50">
+              {{ savingConfig ? 'Salvando...' : 'Atualizar Configurações' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, reactive } from 'vue'
+import { useRoute } from 'vue-router'
+import { useUiStore } from '@/stores/ui'
+import EmpresasService from '@/services/empresas.service'
+
+const route = useRoute()
+const uiStore = useUiStore()
+
+const loading = ref(true)
+const uploading = ref(false)
+const savingConfig = ref(false)
+const empresa = ref(null)
+const selectedFile = ref(null)
+
+const certData = reactive({
+  password: ''
+})
+
+const fiscalConfig = reactive({
+  ambiente_sefaz: '2',
+  serie_nfe: 1,
+  ultimo_numero_nfe: 1
+})
+
+onMounted(async () => {
+  await loadEmpresaData()
+})
+
+async function loadEmpresaData() {
+  loading.value = true
+  try {
+    const response = await EmpresasService.getEmpresa(route.params.id)
+    empresa.value = response
+    
+    // Preenche o formulário de config fiscal
+    if (empresa.value.configuracao_fiscal) {
+      fiscalConfig.ambiente_sefaz = empresa.value.configuracao_fiscal.ambiente_sefaz
+      fiscalConfig.serie_nfe = empresa.value.configuracao_fiscal.serie_nfe
+      fiscalConfig.ultimo_numero_nfe = empresa.value.configuracao_fiscal.ultimo_numero_nfe
+    }
+  } catch (err) {
+    uiStore.showNotification('Erro ao carregar dados da empresa.', 'error')
+    console.error(err)
+  } finally {
+    loading.value = false
+  }
+}
+
+function onFileChange(e) {
+  selectedFile.value = e.target.files[0]
+}
+
+async function handleCertificateUpload() {
+  if (!selectedFile.value) {
+    uiStore.showNotification('Selecione um arquivo .pfx primeiro.', 'warning')
+    return
+  }
+  
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('certificado_digital_pfx', selectedFile.value)
+    formData.append('certificado_senha', certData.password)
+    
+    await EmpresasService.updateEmpresa(empresa.value.id, formData)
+    uiStore.showNotification('Certificado atualizado com sucesso!', 'success')
+    await loadEmpresaData()
+    certData.password = ''
+  } catch (err) {
+    uiStore.showNotification('Erro ao subir certificado.', 'error')
+    console.error(err)
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function handleFiscalConfigUpdate() {
+  savingConfig.value = true
+  try {
+    // Note: This endpoint might need to be created if not exists, 
+    // or we can update directly via the nested config if the serializer allows.
+    // Assuming backend handles partial updates of configuration_fiscal.
+    await EmpresasService.updateEmpresa(empresa.value.id, {
+      configuracao_fiscal: fiscalConfig
+    })
+    uiStore.showNotification('Configurações SEFAZ atualizadas!', 'success')
+    await loadEmpresaData()
+  } catch (err) {
+    uiStore.showNotification('Erro ao salvar configurações.', 'error')
+    console.error(err)
+  } finally {
+    savingConfig.value = false
+  }
+}
+
+function formatCnpj(cnpj) {
+  if (!cnpj) return ''
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('pt-BR')
+}
+</script>

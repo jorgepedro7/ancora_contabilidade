@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111111; /* Preto Institucional */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0F1E3A; /* Azul Marinho (Apoio) */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C6A348; /* Dourado Institucional */
+}
+
+/* Base styles for the entire application */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent global scrollbars if content is managed by flex */
+}
+
+body {
+  @apply bg-ancora-black text-white font-body;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-display;
+}
+
+/* Any other global styles you want to apply */
+
+/* For RouterLink active class styling, can be applied globally or per component */
+.router-link-active {
+  /* Example styling */
+  /* @apply text-ancora-gold; */
+}
