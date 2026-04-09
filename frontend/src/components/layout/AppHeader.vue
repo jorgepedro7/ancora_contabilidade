@@ -15,7 +15,7 @@ function handleLogout() {
     <div class="flex items-center">
       <h1 class="text-2xl font-display text-ancora-gold uppercase tracking-wider">ÂNCORA</h1>
       <span class="ml-4 text-sm text-gray-400" v-if="empresaStore.activeEmpresa">
-        Empresa Ativa: <span class="font-bold">{{ empresaStore.activeEmpresa.nome_fantasia || empresaStore.activeEmpresa.razao_social }}</span>
+        Empresa ativa: <span class="font-bold">{{ empresaStore.activeEmpresa.nome_fantasia || empresaStore.activeEmpresa.razao_social }}</span>
       </span>
     </div>
     <nav>

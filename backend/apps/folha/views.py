@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import (
     Cargo, Departamento, Funcionario, ContratoTrabalho, 
     FolhaPagamento, HoleriteFuncionario, RegistroPonto, 
@@ -33,7 +34,7 @@ class BaseFolhaViewSet(viewsets.ModelViewSet):
         return self.queryset.none()
 
     def perform_create(self, serializer):
-        serializer.save(empresa=self.request.user.empresa_ativa)
+        serializer.save(empresa=obter_empresa_ativa_ou_erro(self.request.user))
 
     def perform_destroy(self, instance):
         instance.soft_delete()
@@ -71,12 +72,13 @@ class FolhaPagamentoViewSet(BaseFolhaViewSet):
     @action(detail=True, methods=['post'])
     def calcular(self, request, pk=None):
         folha_pagamento = self.get_object()
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         
         if folha_pagamento.status != 'ABERTA':
             return Response({'error': 'A folha de pagamento não pode ser calculada neste status.'}, status=status.HTTP_400_BAD_REQUEST)
         
         contratos_ativos = ContratoTrabalho.objects.filter(
-            empresa=self.request.user.empresa_ativa,
+            empresa=empresa,
             ativo=True,
             data_inicio__lte=folha_pagamento.competencia # Contratos ativos na competência
         )
@@ -86,7 +88,7 @@ class FolhaPagamentoViewSet(BaseFolhaViewSet):
             holerite, created = HoleriteFuncionario.objects.get_or_create(
                 folha_pagamento=folha_pagamento,
                 funcionario=contrato.funcionario,
-                empresa=self.request.user.empresa_ativa
+                empresa=empresa
             )
             try:
                 holerite.calcular()

@@ -55,8 +55,8 @@
     </div>
 
     <!-- Modal para Adicionar/Editar Conta a Receber -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-ancora-black/70 flex items-center justify-center z-50">
-      <div class="bg-ancora-black/90 p-8 rounded-lg shadow-xl border border-ancora-gold/30 w-full max-w-lg">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
         <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingConta ? 'Editar Conta a Receber' : 'Nova Conta a Receber' }}</h2>
         <form @submit.prevent="saveContaAReceber" class="space-y-4">
           <div>
@@ -103,8 +103,8 @@
     </div>
 
     <!-- Modal para Receber Conta -->
-    <div v-if="isReceberModalOpen" class="fixed inset-0 bg-ancora-black/70 flex items-center justify-center z-50">
-      <div class="bg-ancora-black/90 p-8 rounded-lg shadow-xl border border-ancora-gold/30 w-full max-w-md">
+    <div v-if="isReceberModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
         <h2 class="text-2xl font-display text-ancora-gold mb-4">Receber Conta: {{ contaToReceber.descricao }}</h2>
         <form @submit.prevent="submitReceber" class="space-y-4">
           <div>

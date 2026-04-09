@@ -65,7 +65,7 @@ class CadastrosAPITestCase(APITestCase):
         data = {
             'nome_razao_social': 'Cliente Teste PF',
             'tipo_pessoa': 'PF',
-            'documento': '11122233344',
+            'documento': '12345678909',
             'email': 'cliente@test.com',
             'cep': '01001000',
             'logradouro': 'Rua Cliente',
@@ -89,7 +89,37 @@ class CadastrosAPITestCase(APITestCase):
         }
         response = self.client.post(self.cliente_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('documento', response.data)
+        self.assertEqual(response.data['errors'][0]['field'], 'documento')
+
+    def test_create_cliente_without_active_company_uses_default_company(self):
+        Cliente.objects.create(
+            empresa=self.empresa2,
+            nome_razao_social='Cliente Inacessível',
+            tipo_pessoa='PF',
+            documento='98765432100',
+            cep='00000000',
+            logradouro='Rua Oculta',
+            numero='999',
+            bairro='Centro',
+            municipio='Recife',
+            uf='PE',
+        )
+        self.user.empresa_ativa = None
+        self.user.save(update_fields=['empresa_ativa'])
+
+        data = {
+            'nome_razao_social': 'Cliente Sem Empresa',
+            'tipo_pessoa': 'PF',
+            'documento': '12345678909',
+            'logradouro': 'Rua Cliente',
+            'numero': '123',
+            'bairro': 'Centro',
+            'municipio': 'Salvador',
+            'uf': 'BA',
+        }
+        response = self.client.post(self.cliente_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Cliente.objects.filter(nome_razao_social='Cliente Sem Empresa').first().empresa, self.empresa1)
 
     def test_list_clientes_only_active_company(self):
         Cliente.objects.create(
@@ -164,4 +194,4 @@ class CadastrosAPITestCase(APITestCase):
         }
         response = self.client.post(self.produto_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('non_field_errors', response.data) # IntegrityError se transforma em non_field_errors
+        self.assertIn('Já existe um produto', str(response.data['message']))

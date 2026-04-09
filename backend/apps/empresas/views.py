@@ -1,41 +1,62 @@
-from rest_framework import viewsets, status
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
-from backend.apps.core.utils import buscar_cep
+
+from backend.apps.core.models import PerfilPermissao
+from backend.apps.core.utils import (
+    buscar_cep,
+    garantir_empresa_padrao,
+    obter_empresas_acessiveis,
+)
 from .models import Empresa
 from .serializers import EmpresaSerializer
+
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
     serializer_class = EmpresaSerializer
-    permission_classes = [IsActiveCompany]
-    filter_backends = [DjangoFilterBackend]
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['regime_tributario', 'uf', 'ativo', 'porte']
     search_fields = ['razao_social', 'nome_fantasia', 'cnpj']
 
     def get_queryset(self):
-        # Apenas superusuários podem ver todas as empresas
-        if self.request.user.is_superuser:
-            return Empresa.objects.all()
-        
-        # O usuário deve ver todas as empresas que ele tem permissão de acesso,
-        # independentemente de qual está "ativa" no momento.
-        return Empresa.objects.filter(
-            id__in=self.request.user.perfis_permissoes.values_list('empresa_id', flat=True),
-            ativo=True
+        return obter_empresas_acessiveis(self.request.user).order_by('nome_fantasia', 'razao_social')
+
+    def perform_create(self, serializer):
+        empresa = serializer.save()
+        PerfilPermissao.objects.get_or_create(
+            usuario=self.request.user,
+            empresa=empresa,
+            defaults={'perfil': 'ADMIN'},
         )
 
+        if not self.request.user.empresa_ativa_id:
+            self.request.user.empresa_ativa = empresa
+            self.request.user.save(update_fields=['empresa_ativa'])
+
     def perform_destroy(self, instance):
-        instance.soft_delete() # Soft delete instead of hard delete
+        instance.soft_delete()
+
+        if self.request.user.empresa_ativa_id == instance.id:
+            self.request.user.empresa_ativa = None
+            self.request.user.save(update_fields=['empresa_ativa'])
+            garantir_empresa_padrao(self.request.user)
 
     @action(detail=True, methods=['post'])
     def selecionar(self, request, pk=None):
         empresa = self.get_object()
         request.user.empresa_ativa = empresa
-        request.user.save()
+        request.user.save(update_fields=['empresa_ativa'])
         return Response({'status': 'Empresa selecionada', 'empresa_id': str(empresa.id)}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='desselecionar')
+    def desselecionar(self, request):
+        request.user.empresa_ativa = None
+        request.user.save(update_fields=['empresa_ativa'])
+        return Response({'status': 'Empresa desmarcada', 'empresa_id': None}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
     def buscar_cep(self, request):

@@ -1,4 +1,5 @@
-
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
@@ -21,4 +22,8 @@ urlpatterns = [
     path('api/folha/', include('backend.apps.folha.urls')),
     path('api/contabil/', include('backend.apps.contabil.urls')),
     path('api/obrigacoes/', include('backend.apps.obrigacoes.urls')),
+    path('api/intake/', include('backend.apps.intake.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

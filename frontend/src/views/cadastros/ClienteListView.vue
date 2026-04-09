@@ -1,16 +1,22 @@
 <template>
   <div class="p-4">
-    <h1 class="text-3xl font-display text-ancora-gold mb-6">Clientes</h1>
+    <div class="mb-6">
+      <h1 class="text-3xl font-display text-ancora-gold mb-2">Clientes da Empresa Ativa</h1>
+      <p class="text-gray-400">
+        Cadastros comerciais da empresa-cliente
+        <span class="font-semibold text-white">{{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'não selecionada' }}</span>.
+      </p>
+    </div>
 
     <div v-if="loading" class="text-center text-gray-400">Carregando clientes...</div>
     <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
 
     <div class="mb-6 flex justify-between items-center">
-      <input type="text" v-model="searchQuery" @input="fetchClientes" placeholder="Buscar cliente por nome ou documento..."
+      <input type="text" v-model="searchQuery" @input="fetchClientes" placeholder="Buscar cliente da empresa por nome ou documento..."
              class="flex-1 px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
       <button @click="openModalForCreate"
               class="ml-4 px-4 py-2 bg-ancora-gold text-ancora-black font-bold rounded-md hover:bg-ancora-gold/90 transition-colors">
-        Novo Cliente
+        Novo Cliente da Empresa
       </button>
     </div>
 
@@ -44,13 +50,13 @@
       </table>
     </div>
     <div v-else-if="!loading && !error" class="text-center text-gray-400 mt-8">
-      Nenhum cliente encontrado.
+      Nenhum cliente cadastrado para a empresa ativa.
     </div>
 
     <!-- Modal para Adicionar/Editar Cliente -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-ancora-black/70 flex items-center justify-center z-50">
-      <div class="bg-ancora-black/90 p-8 rounded-lg shadow-xl border border-ancora-gold/30 w-full max-w-lg">
-        <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingCliente ? 'Editar Cliente' : 'Novo Cliente' }}</h2>
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
+        <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingCliente ? 'Editar Cliente da Empresa' : 'Novo Cliente da Empresa' }}</h2>
         <form @submit.prevent="saveCliente" class="space-y-4">
           <div>
             <label for="modal_nome_razao_social" class="block text-sm font-body text-gray-300">Nome/Razão Social</label>
@@ -69,6 +75,7 @@
             <label for="modal_documento" class="block text-sm font-body text-gray-300">CPF/CNPJ</label>
             <input type="text" id="modal_documento" v-model="currentCliente.documento" required
                    class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
+            <p class="mt-1 text-xs text-gray-500">Use um CPF ou CNPJ válido. O sistema valida o dígito verificador.</p>
           </div>
           <div>
             <label for="modal_email" class="block text-sm font-body text-gray-300">E-mail</label>
@@ -93,9 +100,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
-import CadastrosService from '@/services/cadastros.service' // Precisamos criar este serviço
+import { useEmpresaStore } from '@/stores/empresa'
+import CadastrosService from '@/services/cadastros.service'
+import { extractApiErrorMessage } from '@/utils/api'
 
 const uiStore = useUiStore()
+const empresaStore = useEmpresaStore()
 
 const clientes = ref([])
 const loading = ref(false)
@@ -168,17 +178,22 @@ function closeModal() {
 async function saveCliente() {
   uiStore.setLoading(true)
   try {
+    const payload = {
+      ...currentCliente.value,
+      documento: normalizeDigits(currentCliente.value.documento),
+    }
+
     if (editingCliente.value) {
-      await CadastrosService.updateCliente(currentCliente.value.id, currentCliente.value)
+      await CadastrosService.updateCliente(currentCliente.value.id, payload)
       uiStore.showNotification('Cliente atualizado com sucesso!', 'success')
     } else {
-      await CadastrosService.createCliente(currentCliente.value)
+      await CadastrosService.createCliente(payload)
       uiStore.showNotification('Cliente criado com sucesso!', 'success')
     }
     closeModal()
-    fetchClientes() // Recarregar a lista
+    await fetchClientes()
   } catch (err) {
-    uiStore.showNotification('Erro ao salvar cliente.', 'error')
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao salvar cliente.'), 'error', 6000)
     console.error('Erro ao salvar cliente:', err)
   } finally {
     uiStore.setLoading(false)
@@ -191,13 +206,17 @@ async function deleteCliente(id) {
     try {
       await CadastrosService.deleteCliente(id)
       uiStore.showNotification('Cliente excluído com sucesso!', 'success')
-      fetchClientes()
+      await fetchClientes()
     } catch (err) {
-      uiStore.showNotification('Erro ao excluir cliente.', 'error')
+      uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao excluir cliente.'), 'error')
       console.error('Erro ao excluir cliente:', err)
     } finally {
       uiStore.setLoading(false)
     }
   }
+}
+
+function normalizeDigits(value) {
+  return (value || '').replace(/\D/g, '')
 }
 </script>

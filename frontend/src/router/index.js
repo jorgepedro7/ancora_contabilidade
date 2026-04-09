@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
-import EmpresaListView from '../views/empresas/EmpresaListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,13 +19,25 @@ const router = createRouter({
     {
       path: '/empresas',
       name: 'empresas-list',
-      component: EmpresaListView,
+      component: () => import('../views/empresas/EmpresaListView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/empresa/configuracoes',
+      name: 'empresa-config',
+      component: () => import('../views/empresas/EmpresaConfigView.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/empresas/:id/configuracoes',
-      name: 'empresa-config',
+      name: 'empresa-cliente-config',
       component: () => import('../views/empresas/EmpresaConfigView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/intake',
+      name: 'intake',
+      component: () => import('../views/intake/IntakeView.vue'),
       meta: { requiresAuth: true }
     },
     {

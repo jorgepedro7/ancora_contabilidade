@@ -3,20 +3,22 @@ import { RouterView, useRoute } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
+import AppToast from '@/components/ui/AppToast.vue'
 
 const route = useRoute()
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-ancora-black text-white">
+  <div class="flex min-h-screen flex-col bg-ancora-black text-white">
     <AppHeader v-if="route.name !== 'login'" />
-    <div class="flex flex-1 overflow-hidden">
-      <AppSidebar v-if="route.name !== 'login'" />
-      <main class="flex-1 overflow-y-auto">
+    <div class="flex min-h-0 flex-1 overflow-hidden">
+      <AppSidebar v-if="route.name !== 'login'" class="min-h-0 overflow-y-auto" />
+      <main class="min-h-0 flex-1 overflow-y-auto">
         <RouterView />
       </main>
     </div>
     <AppFooter v-if="route.name !== 'login'" />
+    <AppToast />
   </div>
 </template>
 
