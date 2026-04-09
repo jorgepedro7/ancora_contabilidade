@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .serializers import CustomTokenObtainPairSerializer, UsuarioSerializer
 from .models import Usuario
+from .utils import garantir_empresa_padrao
 
 def custom_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
@@ -46,6 +47,7 @@ class PerfilUsuarioView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
+        garantir_empresa_padrao(self.request.user)
         return self.request.user
 
 class HealthCheckView(generics.GenericAPIView):

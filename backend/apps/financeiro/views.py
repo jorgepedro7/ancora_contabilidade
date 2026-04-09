@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import ContaBancaria, PlanoContas, ContaAPagar, ContaAReceber, MovimentacaoFinanceira
 from .serializers import ContaBancariaSerializer, PlanoContasSerializer, ContaAPagarSerializer, ContaAReceberSerializer, MovimentacaoFinanceiraSerializer
 from django.db.models import Sum
@@ -18,7 +19,7 @@ class BaseFinanceiroViewSet(viewsets.ModelViewSet):
         return self.queryset.none()
 
     def perform_create(self, serializer):
-        serializer.save(empresa=self.request.user.empresa_ativa)
+        serializer.save(empresa=obter_empresa_ativa_ou_erro(self.request.user))
 
     def perform_destroy(self, instance):
         instance.soft_delete()
@@ -91,7 +92,7 @@ class FluxoCaixaView(generics.GenericAPIView):
     permission_classes = [IsActiveCompany]
 
     def get(self, request, *args, **kwargs):
-        empresa = request.user.empresa_ativa
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         data_inicio_str = request.query_params.get('data_inicio')
         data_fim_str = request.query_params.get('data_fim')
 
@@ -141,7 +142,7 @@ class ContasVencendoHojeView(generics.ListAPIView):
     permission_classes = [IsActiveCompany]
 
     def get(self, request, *args, **kwargs):
-        empresa = request.user.empresa_ativa
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         today = date.today()
         five_days_from_now = today + timedelta(days=5)
 

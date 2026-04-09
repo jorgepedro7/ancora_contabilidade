@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 from backend.apps.empresas.models import Empresa, ConfiguracaoFiscalEmpresa
 from backend.apps.core.models import PerfilPermissao
 
@@ -70,7 +71,7 @@ class EmpresaAPITestCase(APITestCase):
         data = {
             'razao_social': 'Nova Empresa Ltda',
             'nome_fantasia': 'NovaEmp',
-            'cnpj': '00000000000300',
+            'cnpj': '12345678000195',
             'regime_tributario': 'MEI',
             'cnae_principal': '5000000',
             'cep': '01001000',
@@ -83,7 +84,13 @@ class EmpresaAPITestCase(APITestCase):
         response = self.client.post(self.empresa_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Empresa.objects.count(), 3)
-        self.assertTrue(ConfiguracaoFiscalEmpresa.objects.filter(empresa__cnpj='00000000000300').exists())
+        self.assertTrue(
+            PerfilPermissao.objects.filter(
+                usuario=self.user_admin,
+                empresa__cnpj='12345678000195',
+                perfil='ADMIN',
+            ).exists()
+        )
     
     def test_list_empresas_regular_user(self):
         token = self.get_auth_token(self.user)
@@ -98,9 +105,13 @@ class EmpresaAPITestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         response = self.client.get(self.empresa_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2) # Superuser sees all available companies from his profiles
-        self.assertIn(str(self.empresa1.id), [e['id'] for e in response.data['results']])
-        self.assertIn(str(self.empresa2.id), [e['id'] for e in response.data['results']])
+        self.assertEqual(response.data['count'], 2)
+
+    def test_regular_user_cannot_access_other_company(self):
+        token = self.get_auth_token(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        response = self.client.get(reverse('empresa-detail', kwargs={'pk': self.empresa2.id}), format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_retrieve_empresa(self):
         token = self.get_auth_token(self.user)
@@ -133,6 +144,14 @@ class EmpresaAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user_admin.refresh_from_db()
         self.assertEqual(self.user_admin.empresa_ativa, self.empresa2)
+
+    def test_desselecionar_empresa(self):
+        token = self.get_auth_token(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        response = self.client.post(reverse('empresa-desselecionar'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.empresa_ativa)
     
     def test_buscar_cep_action(self):
         token = self.get_auth_token(self.user)

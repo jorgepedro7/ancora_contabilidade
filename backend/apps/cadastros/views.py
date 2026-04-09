@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import Cliente, Fornecedor, Produto
 from .serializers import ClienteSerializer, FornecedorSerializer, ProdutoSerializer
 
@@ -15,7 +16,7 @@ class BaseCadastroViewSet(viewsets.ModelViewSet):
         return self.queryset.none() # Retorna queryset vazia se não houver empresa ativa ou autenticação
 
     def perform_create(self, serializer):
-        serializer.save(empresa=self.request.user.empresa_ativa)
+        serializer.save(empresa=obter_empresa_ativa_ou_erro(self.request.user))
 
     def perform_destroy(self, instance):
         instance.soft_delete() # Soft delete instead of hard delete

@@ -35,8 +35,11 @@ class EmpresaSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         config_data = validated_data.pop('configuracao_fiscal', {})
         empresa = super().create(validated_data)
-        # Cria uma configuração fiscal (padrão ou com dados fornecidos)
-        ConfiguracaoFiscalEmpresa.objects.create(empresa=empresa, **config_data)
+        config_instance, _ = ConfiguracaoFiscalEmpresa.objects.get_or_create(empresa=empresa)
+        if config_data:
+            for attr, value in config_data.items():
+                setattr(config_instance, attr, value)
+            config_instance.save()
         return empresa
 
     def update(self, instance, validated_data):

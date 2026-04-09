@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import NotaFiscal, ItemNotaFiscal, EventoNotaFiscal
 from .serializers import NotaFiscalSerializer, ItemNotaFiscalSerializer, EventoNotaFiscalSerializer
 from .services import NFeService
@@ -26,7 +27,7 @@ class NotaFiscalViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Gerar a chave de acesso e o número/série antes de salvar, se for a primeira criação
-        empresa = self.request.user.empresa_ativa
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
         config_fiscal = empresa.configuracao_fiscal
 
         # Criar a nota fiscal como rascunho
@@ -135,12 +136,13 @@ class ItemNotaFiscalViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Ao criar um item, associar à nota fiscal que vem da URL ou corpo da requisição
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
         nota_fiscal_id = self.kwargs.get('nota_fiscal_pk') or self.request.data.get('nota_fiscal')
         if not nota_fiscal_id:
             raise serializers.ValidationError({"nota_fiscal": "ID da Nota Fiscal é obrigatório."})
         
         try:
-            nota_fiscal = NotaFiscal.objects.get(id=nota_fiscal_id, empresa=self.request.user.empresa_ativa)
+            nota_fiscal = NotaFiscal.objects.get(id=nota_fiscal_id, empresa=empresa)
         except NotaFiscal.DoesNotExist:
             raise serializers.ValidationError({"nota_fiscal": "Nota Fiscal não encontrada ou não pertence à empresa ativa."})
         
@@ -148,7 +150,7 @@ class ItemNotaFiscalViewSet(viewsets.ModelViewSet):
         produto_id = self.request.data.get('produto')
         if produto_id:
             try:
-                produto = Produto.objects.get(id=produto_id, empresa=self.request.user.empresa_ativa)
+                produto = Produto.objects.get(id=produto_id, empresa=empresa)
                 serializer.validated_data['produto_descricao'] = produto.descricao
                 serializer.validated_data['produto_ncm'] = produto.ncm
                 serializer.validated_data['produto_cest'] = produto.cest
@@ -172,13 +174,14 @@ class EventoNotaFiscalViewSet(viewsets.ModelViewSet):
         return self.queryset.none()
 
     def perform_create(self, serializer):
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
         nota_fiscal_id = self.kwargs.get('nota_fiscal_pk') or self.request.data.get('nota_fiscal')
         if not nota_fiscal_id:
             raise serializers.ValidationError({"nota_fiscal": "ID da Nota Fiscal é obrigatório."})
         
         try:
-            nota_fiscal = NotaFiscal.objects.get(id=nota_fiscal_id, empresa=self.request.user.empresa_ativa)
+            nota_fiscal = NotaFiscal.objects.get(id=nota_fiscal_id, empresa=empresa)
         except NotaFiscal.DoesNotExist:
             raise serializers.ValidationError({"nota_fiscal": "Nota Fiscal não encontrada ou não pertence à empresa ativa."})
         
-        serializer.save(empresa=self.request.user.empresa_ativa, nota_fiscal=nota_fiscal)
+        serializer.save(empresa=empresa, nota_fiscal=nota_fiscal)

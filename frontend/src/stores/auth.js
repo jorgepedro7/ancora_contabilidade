@@ -20,6 +20,10 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('refresh_token', refreshToken.value)
       localStorage.setItem('user', JSON.stringify(user.value))
 
+      const { useEmpresaStore } = await import('@/stores/empresa')
+      const empresaStore = useEmpresaStore()
+      await empresaStore.syncActiveEmpresa(true)
+
       router.push('/') // Redireciona para o dashboard após login
     } catch (error) {
       console.error('Login failed:', error)
@@ -36,6 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
+    localStorage.removeItem('active_empresa')
 
     router.push('/login') // Redireciona para a página de login
   }
@@ -64,6 +69,10 @@ export const useAuthStore = defineStore('auth', () => {
       const userData = await AuthService.getProfile()
       user.value = userData
       localStorage.setItem('user', JSON.stringify(user.value))
+
+      const { useEmpresaStore } = await import('@/stores/empresa')
+      const empresaStore = useEmpresaStore()
+      await empresaStore.syncActiveEmpresa(true)
     } catch (error) {
       console.error('Failed to fetch profile:', error)
       if (error.response && error.response.status === 401) {

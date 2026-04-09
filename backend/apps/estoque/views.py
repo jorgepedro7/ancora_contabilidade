@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import LocalEstoque, MovimentacaoEstoque, LoteEstoque, InventarioEstoque
 from .serializers import LocalEstoqueSerializer, MovimentacaoEstoqueSerializer, LoteEstoqueSerializer, InventarioEstoqueSerializer
 from backend.apps.cadastros.models import Produto
@@ -18,7 +19,7 @@ class BaseEstoqueViewSet(viewsets.ModelViewSet):
         return self.queryset.none()
 
     def perform_create(self, serializer):
-        serializer.save(empresa=self.request.user.empresa_ativa)
+        serializer.save(empresa=obter_empresa_ativa_ou_erro(self.request.user))
 
     def perform_destroy(self, instance):
         instance.soft_delete()
@@ -37,6 +38,7 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
 
     @action(detail=False, methods=['post'])
     def entrada(self, request):
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         produto_id = request.data.get('produto')
         quantidade = request.data.get('quantidade')
         local_destino_id = request.data.get('local_destino')
@@ -46,12 +48,12 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response({'error': 'Produto, quantidade e local de destino são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            produto = Produto.objects.get(id=produto_id, empresa=self.request.user.empresa_ativa)
-            local_destino = LocalEstoque.objects.get(id=local_destino_id, empresa=self.request.user.empresa_ativa)
+            produto = Produto.objects.get(id=produto_id, empresa=empresa)
+            local_destino = LocalEstoque.objects.get(id=local_destino_id, empresa=empresa)
             quantidade = float(quantidade)
 
             mov = MovimentacaoEstoque.objects.create(
-                empresa=self.request.user.empresa_ativa,
+                empresa=empresa,
                 produto=produto,
                 tipo_movimentacao='ENTRADA',
                 quantidade=quantidade,
@@ -66,6 +68,7 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
 
     @action(detail=False, methods=['post'])
     def saida(self, request):
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         produto_id = request.data.get('produto')
         quantidade = request.data.get('quantidade')
         local_origem_id = request.data.get('local_origem')
@@ -75,8 +78,8 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response({'error': 'Produto, quantidade e local de origem são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            produto = Produto.objects.get(id=produto_id, empresa=self.request.user.empresa_ativa)
-            local_origem = LocalEstoque.objects.get(id=local_origem_id, empresa=self.request.user.empresa_ativa)
+            produto = Produto.objects.get(id=produto_id, empresa=empresa)
+            local_origem = LocalEstoque.objects.get(id=local_origem_id, empresa=empresa)
             quantidade = float(quantidade)
 
             # Verificar se há estoque suficiente antes de registrar a saída
@@ -84,7 +87,7 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
                 return Response({'error': 'Estoque insuficiente para esta saída.'}, status=status.HTTP_400_BAD_REQUEST)
 
             mov = MovimentacaoEstoque.objects.create(
-                empresa=self.request.user.empresa_ativa,
+                empresa=empresa,
                 produto=produto,
                 tipo_movimentacao='SAIDA',
                 quantidade=quantidade,
@@ -138,6 +141,8 @@ class PosicaoEstoqueView(generics.ListAPIView):
 
     def get_queryset(self):
         empresa = self.request.user.empresa_ativa
+        if not empresa:
+            return Produto.objects.none()
         queryset = Produto.objects.filter(empresa=empresa, ativo=True)
         # Pode adicionar filtros por local de estoque ou outras propriedades
         return queryset

@@ -4,6 +4,101 @@ import json
 import random
 from datetime import date
 from decimal import Decimal
+from rest_framework.exceptions import ValidationError
+
+
+def obter_empresas_acessiveis(usuario):
+    from backend.apps.core.models import PerfilPermissao
+    from backend.apps.empresas.models import Empresa
+
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return Empresa.objects.none()
+
+    if getattr(usuario, 'is_superuser', False):
+        return Empresa.objects.filter(ativo=True)
+
+    empresas_ids = PerfilPermissao.objects.filter(
+        usuario=usuario,
+        ativo=True,
+        empresa__ativo=True,
+    ).values_list('empresa_id', flat=True)
+    return Empresa.objects.filter(id__in=empresas_ids, ativo=True)
+
+
+def usuario_tem_acesso_empresa(usuario, empresa):
+    if not usuario or not getattr(usuario, 'is_authenticated', False) or not empresa:
+        return False
+
+    if getattr(usuario, 'is_superuser', False):
+        return empresa.ativo
+
+    from backend.apps.core.models import PerfilPermissao
+
+    return PerfilPermissao.objects.filter(
+        usuario=usuario,
+        empresa=empresa,
+        ativo=True,
+        empresa__ativo=True,
+    ).exists()
+
+
+def calcular_score_empresa(empresa):
+    from backend.apps.cadastros.models import Cliente, Fornecedor, Produto
+    from backend.apps.fiscal.models import NotaFiscal
+    from backend.apps.financeiro.models import ContaAPagar, ContaAReceber, ContaBancaria
+    from backend.apps.folha.models import Funcionario
+
+    return sum([
+        Cliente.objects.filter(empresa=empresa, ativo=True).count(),
+        Fornecedor.objects.filter(empresa=empresa, ativo=True).count(),
+        Produto.objects.filter(empresa=empresa, ativo=True).count(),
+        NotaFiscal.objects.filter(empresa=empresa, ativo=True).count(),
+        ContaAPagar.objects.filter(empresa=empresa, ativo=True).count(),
+        ContaAReceber.objects.filter(empresa=empresa, ativo=True).count(),
+        ContaBancaria.objects.filter(empresa=empresa, ativo=True).count(),
+        Funcionario.objects.filter(empresa=empresa, ativo=True).count(),
+    ])
+
+
+def obter_empresa_principal(usuario=None):
+    if usuario is None:
+        from backend.apps.empresas.models import Empresa
+        empresas = list(Empresa.objects.filter(ativo=True))
+    else:
+        empresas = list(obter_empresas_acessiveis(usuario))
+    if not empresas:
+        return None
+
+    empresas.sort(
+        key=lambda empresa: (-calcular_score_empresa(empresa), empresa.criado_em),
+    )
+    return empresas[0]
+
+
+def garantir_empresa_padrao(usuario, persist=True):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return None
+
+    empresa_atual = getattr(usuario, 'empresa_ativa', None)
+    if empresa_atual and empresa_atual.ativo and usuario_tem_acesso_empresa(usuario, empresa_atual):
+        return empresa_atual
+
+    empresa_principal = obter_empresa_principal(usuario)
+    if not empresa_principal:
+        return None
+
+    if persist and getattr(usuario, 'pk', None) and usuario.empresa_ativa_id != empresa_principal.id:
+        usuario.__class__.objects.filter(pk=usuario.pk).update(empresa_ativa=empresa_principal)
+
+    usuario.empresa_ativa = empresa_principal
+    return empresa_principal
+
+
+def obter_empresa_ativa_ou_erro(user):
+    empresa = garantir_empresa_padrao(user)
+    if not empresa:
+        raise ValidationError({'empresa': 'Selecione uma empresa antes de continuar.'})
+    return empresa
 
 def validar_cpf(cpf):
     cpf = re.sub(r'[^0-9]', '', cpf)

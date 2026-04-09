@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import LancamentoContabil, PartidaLancamento
 from .serializers import LancamentoContabilSerializer, PartidaLancamentoSerializer
 from backend.apps.financeiro.models import PlanoContas
@@ -19,7 +20,7 @@ class BaseContabilViewSet(viewsets.ModelViewSet):
         return self.queryset.none()
 
     def perform_create(self, serializer):
-        serializer.save(empresa=self.request.user.empresa_ativa)
+        serializer.save(empresa=obter_empresa_ativa_ou_erro(self.request.user))
 
     def perform_destroy(self, instance):
         instance.soft_delete()
@@ -44,7 +45,7 @@ class DREView(generics.GenericAPIView):
     permission_classes = [IsActiveCompany]
 
     def get(self, request, *args, **kwargs):
-        empresa = request.user.empresa_ativa
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         data_inicio_str = request.query_params.get('data_inicio')
         data_fim_str = request.query_params.get('data_fim')
 
@@ -91,7 +92,7 @@ class BalancoPatrimonialView(generics.GenericAPIView):
     permission_classes = [IsActiveCompany]
 
     def get(self, request, *args, **kwargs):
-        empresa = request.user.empresa_ativa
+        empresa = obter_empresa_ativa_ou_erro(request.user)
         data_base_str = request.query_params.get('data_base')
 
         if not data_base_str:

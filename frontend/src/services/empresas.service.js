@@ -17,7 +17,12 @@ class EmpresasService {
   }
 
   async updateEmpresa(id, data) {
-    const response = await api.patch(`/empresas/${id}/`, data)
+    const config = data instanceof FormData ? {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    } : {}
+    const response = await api.patch(`/empresas/${id}/`, data, config)
     return response.data
   }
 
@@ -28,6 +33,11 @@ class EmpresasService {
 
   async selectEmpresa(id) {
     const response = await api.post(`/empresas/${id}/selecionar/`)
+    return response.data
+  }
+
+  async clearEmpresaSelection() {
+    const response = await api.post('/empresas/desselecionar/')
     return response.data
   }
 

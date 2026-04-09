@@ -1,6 +1,9 @@
 <template>
   <div class="p-4">
-    <h1 class="text-3xl font-display text-ancora-gold mb-6">Minhas Empresas</h1>
+    <div class="mb-6">
+      <h1 class="text-3xl font-display text-ancora-gold mb-2">Carteira de Clientes</h1>
+      <p class="text-gray-400">Um único escritório, vários clientes atendidos. Escolha abaixo qual cliente ficará ativo no contexto operacional.</p>
+    </div>
 
     <div v-if="loading" class="text-center text-gray-400">Carregando empresas...</div>
     <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
@@ -40,7 +43,7 @@
     </div>
 
     <div class="mt-8">
-      <h2 class="text-2xl font-display text-ancora-gold mb-4">Adicionar Nova Empresa</h2>
+      <h2 class="text-2xl font-display text-ancora-gold mb-4">Adicionar Novo Cliente</h2>
       <form @submit.prevent="submitNewEmpresa" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="razao_social" class="block text-sm font-body text-gray-300">Razão Social</label>
@@ -108,7 +111,7 @@
           <button type="submit" :disabled="uiStore.isLoading"
                   class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-ancora-black bg-ancora-gold hover:bg-ancora-gold/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ancora-gold disabled:opacity-50">
             <span v-if="uiStore.isLoading">Adicionando...</span>
-            <span v-else>Adicionar Empresa</span>
+            <span v-else>Adicionar Cliente</span>
           </button>
         </div>
       </form>
@@ -169,11 +172,10 @@ async function fetchEmpresas() {
 async function selectEmpresa(empresaId) {
   try {
     await empresaStore.selectEmpresa(empresaId)
-    uiStore.showNotification('Empresa ativa selecionada!', 'success')
-    // Redireciona para o dashboard após selecionar
-    // router.push('/') // Adicione o router import se for usar
+    uiStore.showNotification('Cliente ativo selecionado!', 'success')
+    await fetchEmpresas()
   } catch (err) {
-    uiStore.showNotification('Falha ao selecionar empresa.', 'error')
+    uiStore.showNotification('Falha ao selecionar cliente.', 'error')
     console.error('Erro ao selecionar empresa:', err)
   }
 }
@@ -208,7 +210,7 @@ async function submitNewEmpresa() {
   uiStore.setLoading(true)
   try {
     const createdEmpresa = await EmpresasService.createEmpresa(newEmpresa.value)
-    uiStore.showNotification('Empresa adicionada com sucesso!', 'success')
+    uiStore.showNotification('Cliente adicionado com sucesso!', 'success')
     empresas.value.push({
       ...createdEmpresa,
       regime_tributario_display: getRegimeTributarioDisplay(createdEmpresa.regime_tributario)

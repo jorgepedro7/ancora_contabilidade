@@ -1,9 +1,12 @@
 <template>
   <div class="p-4 max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-3xl font-display text-ancora-gold">Configurações Fiscais</h1>
+      <div>
+        <h1 class="text-3xl font-display text-ancora-gold">Cliente e Configurações Fiscais</h1>
+        <p class="text-sm text-gray-400 mt-2">Gerencie certificado e numeração fiscal do cliente selecionado.</p>
+      </div>
       <router-link to="/empresas" class="text-sm text-gray-400 hover:text-ancora-gold transition-colors">
-        &larr; Voltar para Empresas
+        &larr; Voltar para clientes
       </router-link>
     </div>
 
@@ -14,16 +17,29 @@
     <div v-else-if="empresa" class="space-y-6">
       <!-- Card da Empresa -->
       <div class="bg-ancora-navy/30 border border-ancora-gold/20 p-6 rounded-lg shadow-xl">
-        <h2 class="text-xl font-display text-ancora-gold mb-4">Dados da Empresa</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <span class="text-gray-500 block uppercase text-xs font-bold">Razão Social</span>
-            <span class="text-white text-lg">{{ empresa.razao_social }}</span>
+            <h2 class="text-xl font-display text-ancora-gold mb-4">Dados do Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="text-gray-500 block uppercase text-xs font-bold">Razão Social</span>
+                <span class="text-white text-lg">{{ empresa.razao_social }}</span>
+              </div>
+              <div>
+                <span class="text-gray-500 block uppercase text-xs font-bold">CNPJ</span>
+                <span class="text-white text-lg">{{ formatCnpj(empresa.cnpj) }}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span class="text-gray-500 block uppercase text-xs font-bold">CNPJ</span>
-            <span class="text-white text-lg">{{ formatCnpj(empresa.cnpj) }}</span>
-          </div>
+
+          <button
+            v-if="empresa.id !== empresaStore.activeEmpresa?.id"
+            type="button"
+            @click="selecionarComoAtiva"
+            class="px-4 py-2 border border-ancora-gold/40 rounded-md text-ancora-gold hover:bg-ancora-gold/10 transition-colors"
+          >
+            Definir como cliente ativo
+          </button>
         </div>
       </div>
 
@@ -83,7 +99,7 @@
           </div>
           <div>
             <label class="block text-sm font-body text-gray-300 mb-1">Próxima NF-e</label>
-            <input type="number" v-model="fiscalConfig.ultimo_numero_nfe" class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            <input type="number" v-model="fiscalConfig.proximo_numero_nfe" class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
           </div>
           <div class="md:col-span-3 mt-4">
             <button type="submit" :disabled="savingConfig"
@@ -98,13 +114,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUiStore } from '@/stores/ui'
+import { useEmpresaStore } from '@/stores/empresa'
 import EmpresasService from '@/services/empresas.service'
 
 const route = useRoute()
 const uiStore = useUiStore()
+const empresaStore = useEmpresaStore()
 
 const loading = ref(true)
 const uploading = ref(false)
@@ -119,30 +137,48 @@ const certData = reactive({
 const fiscalConfig = reactive({
   ambiente_sefaz: '2',
   serie_nfe: 1,
-  ultimo_numero_nfe: 1
+  proximo_numero_nfe: 1
 })
 
 onMounted(async () => {
   await loadEmpresaData()
 })
 
+watch(() => route.params.id, async () => {
+  await loadEmpresaData()
+})
+
 async function loadEmpresaData() {
   loading.value = true
   try {
-    const response = await EmpresasService.getEmpresa(route.params.id)
+    const empresaId = route.params.id || empresaStore.activeEmpresa?.id || (await empresaStore.syncActiveEmpresa())?.id
+    if (!empresaId) {
+      throw new Error('Nenhum cliente disponível para configuração.')
+    }
+    const response = await EmpresasService.getEmpresa(empresaId)
     empresa.value = response
     
     // Preenche o formulário de config fiscal
     if (empresa.value.configuracao_fiscal) {
       fiscalConfig.ambiente_sefaz = empresa.value.configuracao_fiscal.ambiente_sefaz
       fiscalConfig.serie_nfe = empresa.value.configuracao_fiscal.serie_nfe
-      fiscalConfig.ultimo_numero_nfe = empresa.value.configuracao_fiscal.ultimo_numero_nfe
+      fiscalConfig.proximo_numero_nfe = empresa.value.configuracao_fiscal.proximo_numero_nfe
     }
   } catch (err) {
     uiStore.showNotification('Erro ao carregar dados da empresa.', 'error')
     console.error(err)
   } finally {
     loading.value = false
+  }
+}
+
+async function selecionarComoAtiva() {
+  try {
+    await empresaStore.selectEmpresa(empresa.value.id)
+    uiStore.showNotification('Cliente ativo atualizado.', 'success')
+  } catch (err) {
+    uiStore.showNotification('Erro ao atualizar o cliente ativo.', 'error')
+    console.error(err)
   }
 }
 
