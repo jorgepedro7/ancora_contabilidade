@@ -1,11 +1,11 @@
 <template>
   <div class="p-4">
     <div class="mb-6">
-      <h1 class="text-3xl font-display text-ancora-gold mb-2">Carteira de Clientes</h1>
-      <p class="text-gray-400">Um único escritório, vários clientes atendidos. Escolha abaixo qual cliente ficará ativo no contexto operacional.</p>
+      <h1 class="text-3xl font-display text-ancora-gold mb-2">Empresas da Carteira</h1>
+      <p class="text-gray-400">Um único escritório, várias empresas atendidas. Escolha abaixo qual empresa ficará ativa no contexto operacional.</p>
     </div>
 
-    <div v-if="loading" class="text-center text-gray-400">Carregando empresas...</div>
+    <div v-if="loading" class="text-center text-gray-400">Carregando empresas da carteira...</div>
     <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
 
     <div v-if="empresas.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -24,7 +24,7 @@
             {{ empresa.nome_fantasia || empresa.razao_social }}
           </h3>
           <router-link :to="`/empresas/${empresa.id}/configuracoes`" @click.stop
-                       class="p-1 text-gray-400 hover:text-ancora-gold transition-colors" title="Configurações Fiscais">
+                       class="p-1 text-gray-400 hover:text-ancora-gold transition-colors" title="Configurações da empresa">
             ⚙️
           </router-link>
         </div>
@@ -34,16 +34,17 @@
           v-if="empresa.id === empresaStore.activeEmpresa?.id"
           class="mt-2 inline-block bg-ancora-gold text-ancora-black text-xs font-bold px-2 py-1 rounded-full"
         >
-          Empresa Ativa
+          Empresa ativa
         </span>
       </div>
     </div>
     <div v-else-if="!loading && !error" class="text-center text-gray-400">
-      Nenhuma empresa encontrada.
+      Nenhuma empresa da carteira encontrada.
     </div>
 
     <div class="mt-8">
-      <h2 class="text-2xl font-display text-ancora-gold mb-4">Adicionar Novo Cliente</h2>
+      <h2 class="text-2xl font-display text-ancora-gold mb-2">Adicionar Empresa-Cliente</h2>
+      <p class="text-sm text-gray-400 mb-4">Cadastre uma nova empresa atendida pelo escritório para ativá-la depois no restante do sistema.</p>
       <form @submit.prevent="submitNewEmpresa" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="razao_social" class="block text-sm font-body text-gray-300">Razão Social</label>
@@ -111,7 +112,7 @@
           <button type="submit" :disabled="uiStore.isLoading"
                   class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-ancora-black bg-ancora-gold hover:bg-ancora-gold/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ancora-gold disabled:opacity-50">
             <span v-if="uiStore.isLoading">Adicionando...</span>
-            <span v-else>Adicionar Cliente</span>
+            <span v-else>Adicionar empresa-cliente</span>
           </button>
         </div>
       </form>
@@ -124,6 +125,7 @@ import { ref, onMounted } from 'vue'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useUiStore } from '@/stores/ui'
 import EmpresasService from '@/services/empresas.service'
+import { extractApiErrorMessage } from '@/utils/api'
 
 const empresaStore = useEmpresaStore()
 const uiStore = useUiStore()
@@ -161,7 +163,7 @@ async function fetchEmpresas() {
       regime_tributario_display: getRegimeTributarioDisplay(emp.regime_tributario)
     }))
   } catch (err) {
-    error.value = 'Falha ao carregar empresas.'
+    error.value = 'Falha ao carregar as empresas da carteira.'
     uiStore.showNotification(error.value, 'error')
     console.error('Erro ao carregar empresas:', err)
   } finally {
@@ -172,10 +174,10 @@ async function fetchEmpresas() {
 async function selectEmpresa(empresaId) {
   try {
     await empresaStore.selectEmpresa(empresaId)
-    uiStore.showNotification('Cliente ativo selecionado!', 'success')
+    uiStore.showNotification('Empresa ativa selecionada!', 'success')
     await fetchEmpresas()
   } catch (err) {
-    uiStore.showNotification('Falha ao selecionar cliente.', 'error')
+    uiStore.showNotification('Falha ao selecionar a empresa ativa.', 'error')
     console.error('Erro ao selecionar empresa:', err)
   }
 }
@@ -209,13 +211,13 @@ async function fetchAddress() {
 async function submitNewEmpresa() {
   uiStore.setLoading(true)
   try {
-    const createdEmpresa = await EmpresasService.createEmpresa(newEmpresa.value)
-    uiStore.showNotification('Cliente adicionado com sucesso!', 'success')
-    empresas.value.push({
-      ...createdEmpresa,
-      regime_tributario_display: getRegimeTributarioDisplay(createdEmpresa.regime_tributario)
+    await EmpresasService.createEmpresa({
+      ...newEmpresa.value,
+      cnpj: normalizeDigits(newEmpresa.value.cnpj),
+      cep: normalizeDigits(newEmpresa.value.cep),
+      uf: (newEmpresa.value.uf || '').toUpperCase(),
     })
-    // Limpar formulário
+    uiStore.showNotification('Empresa-cliente adicionada com sucesso!', 'success')
     newEmpresa.value = {
       razao_social: '',
       nome_fantasia: '',
@@ -224,8 +226,9 @@ async function submitNewEmpresa() {
       cnae_principal: '0000000',
       cep: '', logradouro: '', numero: '', bairro: '', municipio: '', uf: '',
     }
+    await fetchEmpresas()
   } catch (err) {
-    uiStore.showNotification('Erro ao adicionar empresa.', 'error')
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao adicionar empresa-cliente.'), 'error', 6000)
     console.error('Erro ao adicionar empresa:', err)
   } finally {
     uiStore.setLoading(false)
@@ -246,5 +249,9 @@ function getRegimeTributarioDisplay(regime) {
     // Adicionar outros regimes conforme modelos do Django
   }
   return choices[regime] || regime
+}
+
+function normalizeDigits(value) {
+  return (value || '').replace(/\D/g, '')
 }
 </script>

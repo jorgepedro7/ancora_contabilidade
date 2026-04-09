@@ -3,16 +3,16 @@
     <section>
       <h1 class="text-3xl font-display text-ancora-gold mb-2">Dashboard</h1>
       <p class="text-gray-400">
-        Escritório único, operação segmentada por cliente. Tudo abaixo reflete o cliente ativo no momento.
+        Escritório único, operação segmentada por empresa-cliente. Tudo abaixo reflete a empresa ativa no momento.
       </p>
     </section>
 
     <section v-if="authStore.user" class="space-y-6">
       <div class="bg-ancora-navy/40 border border-ancora-gold/20 rounded-lg p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Cliente ativo</p>
+          <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Empresa-cliente ativa</p>
           <h2 class="text-2xl font-display text-white">
-            {{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Nenhum cliente selecionado' }}
+            {{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Nenhuma empresa selecionada' }}
           </h2>
           <p v-if="empresaStore.activeEmpresa" class="text-sm text-gray-400 mt-2">
             CNPJ: {{ formatCnpj(empresaStore.activeEmpresa.cnpj) }}
@@ -28,21 +28,21 @@
             to="/empresas"
             class="px-4 py-2 border border-ancora-gold/40 rounded-md text-ancora-gold hover:bg-ancora-gold/10 transition-colors"
           >
-            Ver carteira de clientes
+            Ver carteira de empresas
           </router-link>
           <router-link
             v-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa !== 'CLIENTE'"
             to="/empresa/configuracoes"
             class="px-4 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80"
           >
-            Configurar cliente
+            Configurar empresa ativa
           </router-link>
           <router-link
             v-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa === 'CLIENTE'"
             to="/intake"
             class="px-4 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80"
           >
-            Acessar portal
+            Acessar área do cliente
           </router-link>
         </div>
       </div>
@@ -73,7 +73,7 @@
       </div>
 
       <div v-else class="p-4 border border-red-500/30 rounded-lg bg-red-500/10 text-red-200">
-        Nenhum cliente ativo foi encontrado para este usuário.
+        Nenhuma empresa ativa foi encontrada para este usuário.
       </div>
 
       <section
@@ -82,11 +82,11 @@
       >
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="text-xl font-display text-ancora-gold">Carteira de clientes</h3>
+            <h3 class="text-xl font-display text-ancora-gold">Empresas da carteira</h3>
             <p class="text-sm text-gray-400">Troque o contexto operacional sem sair do sistema.</p>
           </div>
           <router-link to="/empresas" class="text-sm text-gray-400 hover:text-ancora-gold">
-            Gerenciar clientes
+            Gerenciar empresas
           </router-link>
         </div>
 
@@ -189,9 +189,9 @@ async function handleSelectEmpresa(empresaId) {
   try {
     await empresaStore.selectEmpresa(empresaId)
     await loadEmpresas()
-    uiStore.showNotification('Cliente ativo atualizado.', 'success')
+    uiStore.showNotification('Empresa ativa atualizada.', 'success')
   } catch (selectError) {
-    uiStore.showNotification('Falha ao trocar o cliente ativo.', 'error')
+    uiStore.showNotification('Falha ao trocar a empresa ativa.', 'error')
     console.error(selectError)
   } finally {
     switchingCompany.value = false
@@ -231,7 +231,7 @@ async function fetchDashboardData() {
     dashboardData.value.saldo_total_contas = contasBancarias
       .reduce((sum, conta) => sum + parseFloat(conta.saldo_atual || 0), 0)
   } catch (fetchError) {
-    error.value = 'Falha ao carregar os indicadores do cliente ativo.'
+    error.value = 'Falha ao carregar os indicadores da empresa ativa.'
     console.error('Erro ao carregar dashboard:', fetchError)
   }
 }

@@ -3,13 +3,17 @@
     <section class="bg-ancora-black/30 border border-ancora-gold/20 rounded-lg p-6">
       <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Portal operacional do cliente</p>
-          <h1 class="text-3xl font-display text-ancora-gold mb-2">Intake</h1>
-          <p class="text-white text-lg">{{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Cliente não selecionado' }}</p>
+          <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Backoffice interno</p>
+          <h1 class="text-3xl font-display text-ancora-gold mb-2">Central de Recebimentos</h1>
+          <p class="text-white text-lg">{{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Empresa não selecionada' }}</p>
           <p class="text-gray-400 mt-2">
             {{ authStore.user?.perfil_empresa === 'CLIENTE'
-              ? 'Envie documentos e acompanhe as pendências do seu escritório.'
-              : 'Centralize recebimentos, checklist mensal e preparação de exportações especializadas.' }}
+              ? 'Acompanhe os documentos já encaminhados ao escritório e o retorno da operação.'
+              : 'Registre documentos recebidos por e-mail, WhatsApp, coleta manual ou portal externo. Esta tela é da equipe interna.' }}
+          </p>
+          <p v-if="authStore.user?.perfil_empresa !== 'CLIENTE'" class="mt-3 text-xs text-gray-500">
+            A área externa para upload do cliente deve ser publicada separadamente, por exemplo em
+            <span class="font-mono text-gray-300">seu-dominio.com.br/area_cliente</span>.
           </p>
         </div>
 
@@ -28,20 +32,20 @@
         >
           <div class="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h2 class="text-xl font-display text-ancora-gold">Portal do cliente</h2>
-              <p class="text-sm text-gray-400">Base para autenticação e comunicação futura com o cliente deste contexto.</p>
+              <h2 class="text-xl font-display text-ancora-gold">Área do Cliente</h2>
+              <p class="text-sm text-gray-400">Configure o acesso externo que o cliente usará para subir arquivos fora do backoffice.</p>
             </div>
             <span
               class="text-xs uppercase tracking-wide px-2 py-1 rounded"
               :class="portalClienteId ? 'bg-green-600/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'"
             >
-              {{ portalClienteId ? 'Portal configurado' : 'Portal pendente' }}
+              {{ portalClienteId ? 'Área configurada' : 'Área pendente' }}
             </span>
           </div>
 
           <form class="grid grid-cols-1 md:grid-cols-2 gap-4" @submit.prevent="salvarPortal">
             <div>
-              <label class="block text-sm text-gray-300 mb-1">Slug</label>
+              <label class="block text-sm text-gray-300 mb-1">Slug da área</label>
               <input v-model="portalForm.slug" type="text" required class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white" />
             </div>
             <div>
@@ -56,16 +60,26 @@
               <input v-model="portalForm.recebe_alertas" type="checkbox" class="rounded border-ancora-gold/30 bg-ancora-black/70" />
               Receber alertas automáticos
             </label>
+            <div class="md:col-span-2 rounded-md border border-ancora-gold/20 bg-ancora-navy/20 p-4">
+              <p class="text-xs uppercase tracking-wide text-gray-500">URL sugerida para o cliente</p>
+              <p class="mt-2 break-all font-mono text-sm text-white">{{ portalPublicUrl }}</p>
+              <p class="mt-2 text-xs text-gray-400">
+                Use essa URL em um domínio público para o cliente enviar documentos. A Central de Recebimentos continua sendo exclusiva da operação.
+              </p>
+            </div>
             <div class="md:col-span-2">
               <button type="submit" :disabled="savingPortal" class="px-5 py-2 bg-ancora-navy text-ancora-gold border border-ancora-gold/40 rounded-md font-bold hover:bg-ancora-navy/80 disabled:opacity-50">
-                {{ savingPortal ? 'Salvando...' : portalClienteId ? 'Atualizar portal' : 'Criar portal' }}
+                {{ savingPortal ? 'Salvando...' : portalClienteId ? 'Atualizar área do cliente' : 'Criar área do cliente' }}
               </button>
             </div>
           </form>
         </section>
 
         <section class="bg-ancora-black/40 border border-ancora-gold/20 rounded-lg p-6">
-          <h2 class="text-xl font-display text-ancora-gold mb-4">Novo recebimento</h2>
+          <div class="mb-4">
+            <h2 class="text-xl font-display text-ancora-gold">Registrar recebimento interno</h2>
+            <p class="text-sm text-gray-400 mt-1">Use este formulário quando a equipe receber arquivos por e-mail, WhatsApp, coleta física ou importação manual.</p>
+          </div>
           <form class="space-y-4" @submit.prevent="submitRecebimento">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -85,10 +99,10 @@
               <div>
                 <label class="block text-sm text-gray-300 mb-1">Tipo de entrega</label>
                 <select v-model="form.tipo_entrega" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white">
-                  <option value="UPLOAD">Upload</option>
-                  <option value="EMAIL">E-mail</option>
-                  <option value="API">API</option>
-                  <option value="MANUAL">Manual</option>
+                  <option value="UPLOAD">Upload interno</option>
+                  <option value="EMAIL">Recebido por e-mail</option>
+                  <option value="API">Integração/API</option>
+                  <option value="MANUAL">Registro manual</option>
                 </select>
               </div>
               <div>
@@ -96,9 +110,9 @@
                 <input v-model="form.competencia" required type="month" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white" />
               </div>
               <div v-if="authStore.user?.perfil_empresa !== 'CLIENTE' && portalClientes.length">
-                <label class="block text-sm text-gray-300 mb-1">Portal vinculado</label>
+                <label class="block text-sm text-gray-300 mb-1">Área do cliente vinculada</label>
                 <select v-model="form.portal_cliente" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white">
-                  <option value="">Sem portal específico</option>
+                  <option value="">Sem área específica</option>
                   <option v-for="portal in portalClientes" :key="portal.id" :value="portal.id">
                     {{ portal.slug }}
                   </option>
@@ -107,7 +121,7 @@
             </div>
 
             <div>
-              <label class="block text-sm text-gray-300 mb-1">Arquivo</label>
+              <label class="block text-sm text-gray-300 mb-1">Arquivo recebido</label>
               <input required type="file" @change="handleFileChange" class="w-full text-sm text-gray-300" />
             </div>
 
@@ -121,7 +135,7 @@
                 Documentos fiscais sem nota vinculada e documentos de folha sem funcionário ou contrato geram pendência automática.
               </p>
               <button type="submit" :disabled="submitting" class="px-5 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80 disabled:opacity-50">
-                {{ submitting ? 'Enviando...' : 'Enviar documento' }}
+                {{ submitting ? 'Registrando...' : 'Registrar documento' }}
               </button>
             </div>
           </form>
@@ -192,14 +206,14 @@
 
     <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <div class="bg-ancora-black/40 border border-ancora-gold/20 rounded-lg p-6">
-        <h2 class="text-xl font-display text-ancora-gold mb-4">Últimos documentos</h2>
+        <h2 class="text-xl font-display text-ancora-gold mb-4">Últimos recebimentos</h2>
         <div v-if="recebimentos.length" class="space-y-3">
           <div v-for="recebimento in recebimentos" :key="recebimento.id" class="border border-ancora-gold/10 rounded-md p-4 bg-ancora-black/40">
             <div class="flex items-start justify-between gap-4">
               <div>
                 <p class="text-white font-bold">{{ recebimento.titulo }}</p>
                 <p class="text-sm text-gray-400">{{ recebimento.tipo_documento }} • {{ formatCompetencia(recebimento.competencia) }}</p>
-                <p v-if="recebimento.portal_cliente_slug" class="text-xs text-gray-500 mt-1">Portal: {{ recebimento.portal_cliente_slug }}</p>
+                <p v-if="recebimento.portal_cliente_slug" class="text-xs text-gray-500 mt-1">Área externa: {{ recebimento.portal_cliente_slug }}</p>
                 <p class="text-xs text-gray-500 mt-1">{{ recebimento.arquivo_nome }}</p>
               </div>
               <span class="text-xs font-bold px-2 py-1 rounded" :class="badgeClass(recebimento.status)">
@@ -219,7 +233,7 @@
             </div>
           </div>
         </div>
-        <p v-else class="text-gray-500">Nenhum documento recebido ainda.</p>
+        <p v-else class="text-gray-500">Nenhum recebimento registrado ainda.</p>
       </div>
 
       <div class="bg-ancora-black/40 border border-ancora-gold/20 rounded-lg p-6">
@@ -240,7 +254,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import IntakeService from '@/services/intake.service'
 import { useAuthStore } from '@/stores/auth'
@@ -269,6 +283,7 @@ const portalForm = reactive({
   telefone_responsavel: '',
   recebe_alertas: true,
 })
+const portalPublicUrl = computed(() => `https://seu-dominio.com.br/area_cliente/${portalForm.slug || buildDefaultSlug(empresaStore.activeEmpresa) || 'cliente'}`)
 
 const form = ref({
   titulo: '',
@@ -318,7 +333,7 @@ async function loadData() {
 
     syncPortalState()
   } catch (error) {
-    uiStore.showNotification('Erro ao carregar dados do intake.', 'error')
+    uiStore.showNotification('Erro ao carregar dados da central de recebimentos.', 'error')
     console.error(error)
   }
 }
@@ -364,10 +379,10 @@ async function salvarPortal() {
       await IntakeService.createPortalCliente(payload)
     }
 
-    uiStore.showNotification('Portal do cliente salvo com sucesso.', 'success')
+    uiStore.showNotification('Configuração da área do cliente salva com sucesso.', 'success')
     await loadData()
   } catch (error) {
-    uiStore.showNotification('Erro ao salvar portal do cliente.', 'error')
+    uiStore.showNotification('Erro ao salvar a configuração da área do cliente.', 'error')
     console.error(error)
   } finally {
     savingPortal.value = false
@@ -376,7 +391,7 @@ async function salvarPortal() {
 
 async function submitRecebimento() {
   if (!selectedFile.value) {
-    uiStore.showNotification('Selecione um arquivo para enviar.', 'warning')
+    uiStore.showNotification('Selecione o arquivo recebido para registrar.', 'warning')
     return
   }
 
@@ -395,7 +410,7 @@ async function submitRecebimento() {
     }
 
     const response = await IntakeService.createRecebimento(payload)
-    uiStore.showNotification(`Documento enviado com status ${response.status}.`, response.status === 'VALIDADO' ? 'success' : 'warning')
+    uiStore.showNotification(`Documento registrado com status ${response.status}.`, response.status === 'VALIDADO' ? 'success' : 'warning')
 
     form.value = {
       titulo: '',
@@ -408,7 +423,7 @@ async function submitRecebimento() {
     selectedFile.value = null
     await loadData()
   } catch (error) {
-    uiStore.showNotification('Erro ao enviar documento.', 'error')
+    uiStore.showNotification('Erro ao registrar documento.', 'error')
     console.error(error)
   } finally {
     submitting.value = false

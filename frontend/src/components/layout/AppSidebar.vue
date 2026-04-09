@@ -9,11 +9,11 @@ const empresaStore = useEmpresaStore()
 
 const menuItems = [
   { name: 'Dashboard', icon: '📊', path: '/' },
-  { name: 'Clientes', icon: '🏢', path: '/empresas', requiresBackoffice: true },
-  { name: 'Configurações do Cliente', icon: '⚙️', path: '/empresa/configuracoes', requiresEmpresa: true, requiresBackoffice: true },
-  { name: 'Intake', icon: '📥', path: '/intake', requiresEmpresa: true },
+  { name: 'Empresas da Carteira', icon: '🏢', path: '/empresas', requiresBackoffice: true },
+  { name: 'Configuração da Empresa Ativa', icon: '⚙️', path: '/empresa/configuracoes', requiresEmpresa: true, requiresBackoffice: true },
+  { name: 'Central de Recebimentos', icon: '📥', path: '/intake', requiresEmpresa: true },
   { name: 'Cadastros', icon: '📝', children: [
-    { name: 'Clientes', icon: '👥', path: '/cadastros/clientes' },
+    { name: 'Clientes da Empresa', icon: '👥', path: '/cadastros/clientes' },
     { name: 'Fornecedores', icon: '🚚', path: '/cadastros/fornecedores' },
     { name: 'Produtos', icon: '📦', path: '/cadastros/produtos' },
   ], requiresEmpresa: true, requiresBackoffice: true },

@@ -2,11 +2,11 @@
   <div class="p-4 max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-3xl font-display text-ancora-gold">Cliente e Configurações Fiscais</h1>
-        <p class="text-sm text-gray-400 mt-2">Gerencie certificado e numeração fiscal do cliente selecionado.</p>
+        <h1 class="text-3xl font-display text-ancora-gold">Empresa e Configurações Fiscais</h1>
+        <p class="text-sm text-gray-400 mt-2">Gerencie certificado e numeração fiscal da empresa-cliente selecionada.</p>
       </div>
       <router-link to="/empresas" class="text-sm text-gray-400 hover:text-ancora-gold transition-colors">
-        &larr; Voltar para clientes
+        &larr; Voltar para a carteira
       </router-link>
     </div>
 
@@ -19,7 +19,7 @@
       <div class="bg-ancora-navy/30 border border-ancora-gold/20 p-6 rounded-lg shadow-xl">
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 class="text-xl font-display text-ancora-gold mb-4">Dados do Cliente</h2>
+            <h2 class="text-xl font-display text-ancora-gold mb-4">Dados da Empresa</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span class="text-gray-500 block uppercase text-xs font-bold">Razão Social</span>
@@ -38,7 +38,7 @@
             @click="selecionarComoAtiva"
             class="px-4 py-2 border border-ancora-gold/40 rounded-md text-ancora-gold hover:bg-ancora-gold/10 transition-colors"
           >
-            Definir como cliente ativo
+            Definir como empresa ativa
           </button>
         </div>
       </div>
@@ -153,7 +153,7 @@ async function loadEmpresaData() {
   try {
     const empresaId = route.params.id || empresaStore.activeEmpresa?.id || (await empresaStore.syncActiveEmpresa())?.id
     if (!empresaId) {
-      throw new Error('Nenhum cliente disponível para configuração.')
+      throw new Error('Nenhuma empresa disponível para configuração.')
     }
     const response = await EmpresasService.getEmpresa(empresaId)
     empresa.value = response
@@ -175,9 +175,9 @@ async function loadEmpresaData() {
 async function selecionarComoAtiva() {
   try {
     await empresaStore.selectEmpresa(empresa.value.id)
-    uiStore.showNotification('Cliente ativo atualizado.', 'success')
+    uiStore.showNotification('Empresa ativa atualizada.', 'success')
   } catch (err) {
-    uiStore.showNotification('Erro ao atualizar o cliente ativo.', 'error')
+    uiStore.showNotification('Erro ao atualizar a empresa ativa.', 'error')
     console.error(err)
   }
 }
