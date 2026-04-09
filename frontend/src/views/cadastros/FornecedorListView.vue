@@ -48,8 +48,8 @@
     </div>
 
     <!-- Modal para Adicionar/Editar Fornecedor -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-ancora-black/70 flex items-center justify-center z-50">
-      <div class="bg-ancora-black/90 p-8 rounded-lg shadow-xl border border-ancora-gold/30 w-full max-w-lg">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
         <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingFornecedor ? 'Editar Fornecedor' : 'Novo Fornecedor' }}</h2>
         <form @submit.prevent="saveFornecedor" class="space-y-4">
           <div>
@@ -126,6 +126,7 @@
 import { ref, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import CadastrosService from '@/services/cadastros.service'
+import { extractApiErrorMessage } from '@/utils/api'
 
 const uiStore = useUiStore()
 
@@ -209,17 +210,22 @@ function closeModal() {
 async function saveFornecedor() {
   uiStore.setLoading(true)
   try {
+    const payload = {
+      ...currentFornecedor.value,
+      documento: normalizeDigits(currentFornecedor.value.documento),
+    }
+
     if (editingFornecedor.value) {
-      await CadastrosService.updateFornecedor(currentFornecedor.value.id, currentFornecedor.value)
+      await CadastrosService.updateFornecedor(currentFornecedor.value.id, payload)
       uiStore.showNotification('Fornecedor atualizado com sucesso!', 'success')
     } else {
-      await CadastrosService.createFornecedor(currentFornecedor.value)
+      await CadastrosService.createFornecedor(payload)
       uiStore.showNotification('Fornecedor criado com sucesso!', 'success')
     }
     closeModal()
-    fetchFornecedores() // Recarregar a lista
+    await fetchFornecedores()
   } catch (err) {
-    uiStore.showNotification('Erro ao salvar fornecedor.', 'error')
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao salvar fornecedor.'), 'error', 6000)
     console.error('Erro ao salvar fornecedor:', err)
   } finally {
     uiStore.setLoading(false)
@@ -232,13 +238,17 @@ async function deleteFornecedor(id) {
     try {
       await CadastrosService.deleteFornecedor(id)
       uiStore.showNotification('Fornecedor excluído com sucesso!', 'success')
-      fetchFornecedores()
+      await fetchFornecedores()
     } catch (err) {
-      uiStore.showNotification('Erro ao excluir fornecedor.', 'error')
+      uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao excluir fornecedor.'), 'error')
       console.error('Erro ao excluir fornecedor:', err)
     } finally {
       uiStore.setLoading(false)
     }
   }
+}
+
+function normalizeDigits(value) {
+  return (value || '').replace(/\D/g, '')
 }
 </script>

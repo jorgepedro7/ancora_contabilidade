@@ -50,8 +50,8 @@
     </div>
 
     <!-- Modal para Adicionar/Editar Obrigação Fiscal -->
-    <div v-if="isModalOpen" class="fixed inset-0 bg-ancora-black/70 flex items-center justify-center z-50">
-      <div class="bg-ancora-black/90 p-8 rounded-lg shadow-xl border border-ancora-gold/30 w-full max-w-lg">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
         <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingObrigacao ? 'Editar Obrigação' : 'Nova Obrigação Fiscal' }}</h2>
         <form @submit.prevent="saveObrigacao" class="space-y-4">
           <div>
