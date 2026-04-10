@@ -17,6 +17,11 @@ class IntakeAPITestCase(APITestCase):
             nome='Usuário Intake',
             password='password123',
         )
+        self.portal_user = self.user_model.objects.create_user(
+            email='portal@example.com',
+            nome='Usuário Cliente',
+            password='clientpassword',
+        )
         self.empresa = Empresa.objects.create(
             razao_social='Empresa Intake',
             nome_fantasia='Intake',
@@ -31,12 +36,22 @@ class IntakeAPITestCase(APITestCase):
             uf='SP',
         )
         PerfilPermissao.objects.create(usuario=self.user, empresa=self.empresa, perfil='ADMIN')
+        PerfilPermissao.objects.create(usuario=self.portal_user, empresa=self.empresa, perfil='CLIENTE')
         self.user.empresa_ativa = self.empresa
         self.user.save(update_fields=['empresa_ativa'])
+        self.portal_user.empresa_ativa = self.empresa
+        self.portal_user.save(update_fields=['empresa_ativa'])
 
         token = self.client.post(reverse('token_obtain_pair'), {
             'email': self.user.email,
             'password': 'password123',
+        }, format='json').data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def authenticate_portal_user(self):
+        token = self.client.post(reverse('token_obtain_pair'), {
+            'email': self.portal_user.email,
+            'password': 'clientpassword',
         }, format='json').data['access']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -119,3 +134,28 @@ class IntakeAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(LoteExportacaoQuestor.objects.count(), 1)
         self.assertEqual(LoteExportacaoQuestor.objects.first().status, 'EXPORTADO')
+
+    def test_cliente_profile_cannot_access_intake_backoffice(self):
+        self.authenticate_portal_user()
+
+        response = self.client.get(reverse('recebimento-list'), format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_disallowed_upload_extension(self):
+        arquivo = SimpleUploadedFile('payload.html', b'<script>alert(1)</script>', content_type='text/html')
+
+        response = self.client.post(
+            reverse('recebimento-list'),
+            {
+                'titulo': 'Arquivo inválido',
+                'tipo_documento': 'GERAL',
+                'tipo_entrega': 'UPLOAD',
+                'competencia': '2026-03-01',
+                'arquivo': arquivo,
+            },
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['errors'][0]['field'], 'arquivo')

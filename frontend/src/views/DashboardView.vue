@@ -37,13 +37,12 @@
           >
             Configurar empresa ativa
           </router-link>
-          <router-link
+          <p
             v-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa === 'CLIENTE'"
-            to="/intake"
-            class="px-4 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80"
+            class="max-w-xs text-sm text-gray-400"
           >
-            Acessar área do cliente
-          </router-link>
+            A área do cliente deve ser publicada em um portal separado, fora do backoffice.
+          </p>
         </div>
       </div>
 

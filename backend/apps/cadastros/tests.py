@@ -14,6 +14,11 @@ class CadastrosAPITestCase(APITestCase):
             nome='Test User',
             password='password123'
         )
+        self.client_user = self.User.objects.create_user(
+            email='portal@test.com',
+            nome='Portal User',
+            password='clientpassword'
+        )
 
         self.empresa1 = Empresa.objects.create(
             razao_social='Empresa Cadastros 1',
@@ -43,8 +48,11 @@ class CadastrosAPITestCase(APITestCase):
         )
 
         PerfilPermissao.objects.create(usuario=self.user, empresa=self.empresa1, perfil='ADMIN')
+        PerfilPermissao.objects.create(usuario=self.client_user, empresa=self.empresa1, perfil='CLIENTE')
         self.user.empresa_ativa = self.empresa1
         self.user.save()
+        self.client_user.empresa_ativa = self.empresa1
+        self.client_user.save()
 
         self.token = self._get_auth_token(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
@@ -56,7 +64,7 @@ class CadastrosAPITestCase(APITestCase):
     def _get_auth_token(self, user):
         response = self.client.post(reverse('token_obtain_pair'), {
             'email': user.email,
-            'password': 'password123'
+            'password': 'clientpassword' if user.email == 'portal@test.com' else 'password123'
         }, format='json')
         return response.data['access']
 
@@ -195,3 +203,11 @@ class CadastrosAPITestCase(APITestCase):
         response = self.client.post(self.produto_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Já existe um produto', str(response.data['message']))
+
+    def test_cliente_profile_cannot_access_cadastros_backoffice(self):
+        token = self._get_auth_token(self.client_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        response = self.client.get(self.cliente_url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

@@ -68,6 +68,9 @@ services:
       - /app/frontend/node_modules # Anonymous volume to hide host node_modules
     ports:
       - "3000:3000"
+    environment:
+      - VITE_API_PROXY_TARGET=http://backend:8000
+      - VITE_ALLOWED_HOSTS=localhost,127.0.0.1,backend,9bf2-170-0-212-221.ngrok-free.app
     depends_on:
       - backend
 
