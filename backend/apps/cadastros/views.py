@@ -1,12 +1,12 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import Cliente, Fornecedor, Produto
 from .serializers import ClienteSerializer, FornecedorSerializer, ProdutoSerializer
 
 class BaseCadastroViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):

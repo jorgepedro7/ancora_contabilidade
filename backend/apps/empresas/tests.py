@@ -19,6 +19,11 @@ class EmpresaAPITestCase(APITestCase):
             nome='Admin User',
             password='adminpassword'
         )
+        self.user_cliente = self.User.objects.create_user(
+            email='cliente@example.com',
+            nome='Portal Client',
+            password='clientepassword'
+        )
 
         self.empresa_url = reverse('empresa-list')
         self.empresa1 = Empresa.objects.create(
@@ -51,17 +56,24 @@ class EmpresaAPITestCase(APITestCase):
         PerfilPermissao.objects.create(usuario=self.user, empresa=self.empresa1, perfil='ADMIN')
         PerfilPermissao.objects.create(usuario=self.user_admin, empresa=self.empresa1, perfil='ADMIN')
         PerfilPermissao.objects.create(usuario=self.user_admin, empresa=self.empresa2, perfil='ADMIN')
+        PerfilPermissao.objects.create(usuario=self.user_cliente, empresa=self.empresa1, perfil='CLIENTE')
         
         self.user.empresa_ativa = self.empresa1
         self.user.save()
         self.user_admin.empresa_ativa = self.empresa1
         self.user_admin.save()
+        self.user_cliente.empresa_ativa = self.empresa1
+        self.user_cliente.save()
 
 
     def get_auth_token(self, user):
         response = self.client.post(reverse('token_obtain_pair'), {
             'email': user.email,
-            'password': 'password123' if not user.is_superuser else 'adminpassword'
+            'password': (
+                'adminpassword' if user.is_superuser else
+                'clientepassword' if user.email == 'cliente@example.com' else
+                'password123'
+            )
         }, format='json')
         return response.data['access']
 
@@ -172,3 +184,41 @@ class EmpresaAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['nome_fantasia'], 'EmpTest 1')
         self.assertIn('nfe_emitidas_mes', response.data)
+
+    def test_cliente_profile_cannot_access_empresa_management(self):
+        token = self.get_auth_token(self.user_cliente)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        response = self.client.get(self.empresa_url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_login_prefers_backoffice_company_when_user_has_mixed_profiles(self):
+        PerfilPermissao.objects.create(usuario=self.user, empresa=self.empresa2, perfil='CLIENTE')
+        self.user.empresa_ativa = None
+        self.user.save(update_fields=['empresa_ativa'])
+
+        response = self.client.post(reverse('token_obtain_pair'), {
+            'email': self.user.email,
+            'password': 'password123',
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['empresa_ativa_id'], str(self.empresa1.id))
+        self.assertEqual(response.data['user']['perfil_empresa'], 'ADMIN')
+
+    def test_empresa_response_hides_fiscal_secrets(self):
+        self.empresa1.certificado_senha = 'segredo-certificado'
+        self.empresa1.save(update_fields=['certificado_senha'])
+        self.empresa1.configuracao_fiscal.csc_token_nfce = 'segredo-csc'
+        self.empresa1.configuracao_fiscal.save(update_fields=['csc_token_nfce'])
+
+        token = self.get_auth_token(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+        response = self.client.get(reverse('empresa-detail', kwargs={'pk': self.empresa1.id}), format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('certificado_senha', response.data)
+        self.assertNotIn('certificado_digital_pfx', response.data)
+        self.assertNotIn('csc_token_nfce', response.data['configuracao_fiscal'])

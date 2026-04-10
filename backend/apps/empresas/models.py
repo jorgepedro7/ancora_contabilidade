@@ -106,7 +106,7 @@ class ConfiguracaoFiscalEmpresa(ModelBase):
     def __str__(self):
         return f"Configuração Fiscal para {self.empresa.nome_exibicao}"
 
-    def proximo_numero_nfe(self):
+    def gerar_proximo_numero_nfe(self):
         with transaction.atomic():
             self.refresh_from_db() # Garante que estamos com a versão mais recente do banco
             proximo = self.proximo_numero_nfe
@@ -114,7 +114,7 @@ class ConfiguracaoFiscalEmpresa(ModelBase):
             self.save(update_fields=['proximo_numero_nfe'])
             return proximo
 
-    def proximo_numero_nfce(self):
+    def gerar_proximo_numero_nfce(self):
         with transaction.atomic():
             self.refresh_from_db()
             proximo = self.proximo_numero_nfce
@@ -122,7 +122,7 @@ class ConfiguracaoFiscalEmpresa(ModelBase):
             self.save(update_fields=['proximo_numero_nfce'])
             return proximo
 
-    def proximo_numero_nfse(self):
+    def gerar_proximo_numero_nfse(self):
         with transaction.atomic():
             self.refresh_from_db()
             proximo = self.proximo_numero_nfse

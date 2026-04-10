@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import LancamentoContabil, PartidaLancamento
 from .serializers import LancamentoContabilSerializer, PartidaLancamentoSerializer
@@ -11,7 +11,7 @@ from django.db.models import Sum
 from datetime import date
 
 class BaseContabilViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):
@@ -42,7 +42,7 @@ class PartidaLancamentoViewSet(BaseContabilViewSet):
     search_fields = ['historico_complementar']
 
 class DREView(generics.GenericAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get(self, request, *args, **kwargs):
         empresa = obter_empresa_ativa_ou_erro(request.user)
@@ -89,7 +89,7 @@ class DREView(generics.GenericAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
 class BalancoPatrimonialView(generics.GenericAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get(self, request, *args, **kwargs):
         empresa = obter_empresa_ativa_ou_erro(request.user)

@@ -11,7 +11,7 @@ const menuItems = [
   { name: 'Dashboard', icon: '📊', path: '/' },
   { name: 'Empresas da Carteira', icon: '🏢', path: '/empresas', requiresBackoffice: true },
   { name: 'Configuração da Empresa Ativa', icon: '⚙️', path: '/empresa/configuracoes', requiresEmpresa: true, requiresBackoffice: true },
-  { name: 'Central de Recebimentos', icon: '📥', path: '/intake', requiresEmpresa: true },
+  { name: 'Central de Recebimentos', icon: '📥', path: '/intake', requiresEmpresa: true, requiresBackoffice: true },
   { name: 'Cadastros', icon: '📝', children: [
     { name: 'Clientes da Empresa', icon: '👥', path: '/cadastros/clientes' },
     { name: 'Fornecedores', icon: '🚚', path: '/cadastros/fornecedores' },

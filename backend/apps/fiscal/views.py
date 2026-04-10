@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import NotaFiscal, ItemNotaFiscal, EventoNotaFiscal
 from .serializers import NotaFiscalSerializer, ItemNotaFiscalSerializer, EventoNotaFiscalSerializer
@@ -14,7 +14,7 @@ from .filters import NotaFiscalFilter # New import
 class NotaFiscalViewSet(viewsets.ModelViewSet):
     queryset = NotaFiscal.objects.all()
     serializer_class = NotaFiscalSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = NotaFiscalFilter # New line
     filterset_fields = ['status', 'tipo_nf', 'finalidade']
@@ -123,7 +123,7 @@ class NotaFiscalViewSet(viewsets.ModelViewSet):
 class ItemNotaFiscalViewSet(viewsets.ModelViewSet):
     queryset = ItemNotaFiscal.objects.all()
     serializer_class = ItemNotaFiscalSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['nota_fiscal']
     search_fields = ['produto_descricao']
@@ -164,7 +164,7 @@ class ItemNotaFiscalViewSet(viewsets.ModelViewSet):
 class EventoNotaFiscalViewSet(viewsets.ModelViewSet):
     queryset = EventoNotaFiscal.objects.all()
     serializer_class = EventoNotaFiscalSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['nota_fiscal', 'tipo_evento']
 

@@ -6,6 +6,25 @@ from .models import ChecklistCompetencia, DocumentoRecebido, LoteExportacaoQuest
 from .services import calcular_hash_arquivo, obter_ou_criar_checklist, sincronizar_pendencias_documento, validar_documento
 
 
+MAX_DOCUMENTO_SIZE = 10 * 1024 * 1024
+ALLOWED_DOCUMENT_EXTENSIONS = {
+    '.pdf', '.xml', '.csv', '.txt', '.zip', '.xls', '.xlsx', '.jpg', '.jpeg', '.png',
+}
+ALLOWED_DOCUMENT_CONTENT_TYPES = {
+    'application/pdf',
+    'application/xml',
+    'text/xml',
+    'text/plain',
+    'text/csv',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+}
+
+
 class PortalClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = PortalCliente
@@ -63,6 +82,23 @@ class DocumentoRecebidoSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({related_field: 'O registro vinculado não pertence à empresa ativa.'})
 
         return attrs
+
+    def validate_arquivo(self, value):
+        if not value:
+            raise serializers.ValidationError('Arquivo é obrigatório.')
+
+        filename = (getattr(value, 'name', '') or '').lower()
+        if not any(filename.endswith(extension) for extension in ALLOWED_DOCUMENT_EXTENSIONS):
+            raise serializers.ValidationError('Tipo de arquivo não permitido para o intake.')
+
+        if getattr(value, 'size', 0) > MAX_DOCUMENTO_SIZE:
+            raise serializers.ValidationError('O arquivo excede o tamanho máximo permitido de 10 MB.')
+
+        content_type = getattr(value, 'content_type', None)
+        if content_type and content_type not in ALLOWED_DOCUMENT_CONTENT_TYPES:
+            raise serializers.ValidationError('Content-Type do arquivo não é aceito pelo intake.')
+
+        return value
 
     def create(self, validated_data):
         empresa = obter_empresa_ativa_ou_erro(self.context['request'].user)

@@ -1,14 +1,14 @@
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from backend.apps.core.models import PerfilPermissao
+from backend.apps.core.permissions import IsBackofficeUser
 from backend.apps.core.utils import (
     buscar_cep,
     garantir_empresa_padrao,
-    obter_empresas_acessiveis,
+    obter_empresas_backoffice,
 )
 from .models import Empresa
 from .serializers import EmpresaSerializer
@@ -17,13 +17,13 @@ from .serializers import EmpresaSerializer
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsBackofficeUser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['regime_tributario', 'uf', 'ativo', 'porte']
     search_fields = ['razao_social', 'nome_fantasia', 'cnpj']
 
     def get_queryset(self):
-        return obter_empresas_acessiveis(self.request.user).order_by('nome_fantasia', 'razao_social')
+        return obter_empresas_backoffice(self.request.user).order_by('nome_fantasia', 'razao_social')
 
     def perform_create(self, serializer):
         empresa = serializer.save()

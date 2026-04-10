@@ -3,7 +3,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import (
     Cargo, Departamento, Funcionario, ContratoTrabalho, 
@@ -18,7 +18,7 @@ from .serializers import (
 )
 
 class BaseFolhaViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):

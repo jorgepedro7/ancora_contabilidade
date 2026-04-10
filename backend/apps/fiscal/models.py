@@ -110,9 +110,9 @@ class NotaFiscal(ModelBaseEmpresa):
             self.serie = self.empresa.configuracao_fiscal.serie_nfce
         
         if not self.numero and self.tipo_nf == '1':
-            self.numero = self.empresa.configuracao_fiscal.proximo_numero_nfe()
+            self.numero = self.empresa.configuracao_fiscal.gerar_proximo_numero_nfe()
         elif not self.numero and self.tipo_nf == '2':
-            self.numero = self.empresa.configuracao_fiscal.proximo_numero_nfce()
+            self.numero = self.empresa.configuracao_fiscal.gerar_proximo_numero_nfce()
             
         super().save(*args, **kwargs)
 

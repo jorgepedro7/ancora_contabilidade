@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, Http404
 
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 
 from .models import ChecklistCompetencia, DocumentoRecebido, LoteExportacaoQuestor, Pendencia, PortalCliente
@@ -22,7 +22,7 @@ from .services import gerar_lote_questor, parse_competencia, sincronizar_pendenc
 class PortalClienteViewSet(viewsets.ModelViewSet):
     queryset = PortalCliente.objects.all()
     serializer_class = PortalClienteSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get_queryset(self):
         empresa = obter_empresa_ativa_ou_erro(self.request.user)
@@ -35,7 +35,7 @@ class PortalClienteViewSet(viewsets.ModelViewSet):
 class DocumentoRecebidoViewSet(viewsets.ModelViewSet):
     queryset = DocumentoRecebido.objects.all()
     serializer_class = DocumentoRecebidoSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'tipo_documento', 'competencia']
@@ -52,7 +52,7 @@ class DocumentoRecebidoViewSet(viewsets.ModelViewSet):
 class ChecklistCompetenciaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ChecklistCompetencia.objects.all()
     serializer_class = ChecklistCompetenciaSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['competencia', 'modulo', 'status']
 
@@ -64,7 +64,7 @@ class ChecklistCompetenciaViewSet(viewsets.ReadOnlyModelViewSet):
 class PendenciaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Pendencia.objects.all()
     serializer_class = PendenciaSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status', 'severidade', 'checklist__competencia']
     search_fields = ['titulo', 'descricao']
@@ -77,7 +77,7 @@ class PendenciaViewSet(viewsets.ReadOnlyModelViewSet):
 class LoteExportacaoQuestorViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LoteExportacaoQuestor.objects.all()
     serializer_class = LoteExportacaoQuestorSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get_queryset(self):
         empresa = obter_empresa_ativa_ou_erro(self.request.user)
@@ -97,7 +97,7 @@ class LoteExportacaoQuestorViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ConfirmarRecebimentoView(generics.GenericAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     serializer_class = DocumentoRecebidoSerializer
 
     def post(self, request, *args, **kwargs):
@@ -128,7 +128,7 @@ class ConfirmarRecebimentoView(generics.GenericAPIView):
 
 
 class ExportarQuestorView(generics.GenericAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     serializer_class = LoteExportacaoQuestorSerializer
 
     def post(self, request, *args, **kwargs):

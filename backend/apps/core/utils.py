@@ -25,6 +25,26 @@ def obter_empresas_acessiveis(usuario):
     return Empresa.objects.filter(id__in=empresas_ids, ativo=True)
 
 
+def obter_empresas_backoffice(usuario):
+    from backend.apps.core.models import PerfilPermissao
+    from backend.apps.empresas.models import Empresa
+
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return Empresa.objects.none()
+
+    if getattr(usuario, 'is_superuser', False):
+        return Empresa.objects.filter(ativo=True)
+
+    empresas_ids = PerfilPermissao.objects.filter(
+        usuario=usuario,
+        ativo=True,
+        empresa__ativo=True,
+    ).exclude(
+        perfil='CLIENTE',
+    ).values_list('empresa_id', flat=True)
+    return Empresa.objects.filter(id__in=empresas_ids, ativo=True)
+
+
 def usuario_tem_acesso_empresa(usuario, empresa):
     if not usuario or not getattr(usuario, 'is_authenticated', False) or not empresa:
         return False
@@ -39,6 +59,49 @@ def usuario_tem_acesso_empresa(usuario, empresa):
         empresa=empresa,
         ativo=True,
         empresa__ativo=True,
+    ).exists()
+
+
+def obter_perfil_empresa(usuario, empresa=None):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return None
+
+    empresa = empresa or getattr(usuario, 'empresa_ativa', None)
+    if not empresa:
+        return None
+
+    from backend.apps.core.models import PerfilPermissao
+
+    try:
+        return PerfilPermissao.objects.get(
+            usuario=usuario,
+            empresa=empresa,
+            ativo=True,
+            empresa__ativo=True,
+        )
+    except PerfilPermissao.DoesNotExist:
+        return None
+
+
+def usuario_tem_perfil_backoffice(usuario, empresa=None):
+    if not usuario or not getattr(usuario, 'is_authenticated', False):
+        return False
+
+    if getattr(usuario, 'is_superuser', False):
+        return True
+
+    perfil = obter_perfil_empresa(usuario, empresa) if empresa else None
+    if perfil is not None:
+        return perfil.perfil != 'CLIENTE'
+
+    from backend.apps.core.models import PerfilPermissao
+
+    return PerfilPermissao.objects.filter(
+        usuario=usuario,
+        ativo=True,
+        empresa__ativo=True,
+    ).exclude(
+        perfil='CLIENTE',
     ).exists()
 
 
@@ -66,6 +129,11 @@ def obter_empresa_principal(usuario=None):
         empresas = list(Empresa.objects.filter(ativo=True))
     else:
         empresas = list(obter_empresas_acessiveis(usuario))
+        empresas_backoffice_ids = set(
+            obter_empresas_backoffice(usuario).values_list('id', flat=True),
+        )
+        if empresas_backoffice_ids:
+            empresas = [empresa for empresa in empresas if empresa.id in empresas_backoffice_ids]
     if not empresas:
         return None
 

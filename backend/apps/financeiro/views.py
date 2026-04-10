@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import ContaBancaria, PlanoContas, ContaAPagar, ContaAReceber, MovimentacaoFinanceira
 from .serializers import ContaBancariaSerializer, PlanoContasSerializer, ContaAPagarSerializer, ContaAReceberSerializer, MovimentacaoFinanceiraSerializer
@@ -10,7 +10,7 @@ from django.db.models import Sum
 from datetime import date, timedelta
 
 class BaseFinanceiroViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):
@@ -89,7 +89,7 @@ class MovimentacaoFinanceiraViewSet(BaseFinanceiroViewSet):
     search_fields = ['descricao']
 
 class FluxoCaixaView(generics.GenericAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get(self, request, *args, **kwargs):
         empresa = obter_empresa_ativa_ou_erro(request.user)
@@ -139,7 +139,7 @@ class FluxoCaixaView(generics.GenericAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
 class ContasVencendoHojeView(generics.ListAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
 
     def get(self, request, *args, **kwargs):
         empresa = obter_empresa_ativa_ou_erro(request.user)

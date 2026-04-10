@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import LocalEstoque, MovimentacaoEstoque, LoteEstoque, InventarioEstoque
 from .serializers import LocalEstoqueSerializer, MovimentacaoEstoqueSerializer, LoteEstoqueSerializer, InventarioEstoqueSerializer
@@ -10,7 +10,7 @@ from backend.apps.cadastros.models import Produto
 from backend.apps.cadastros.serializers import ProdutoSerializer
 
 class BaseEstoqueViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):
@@ -136,7 +136,7 @@ class InventarioEstoqueViewSet(BaseEstoqueViewSet):
         return Response(InventarioEstoqueSerializer(inventario).data, status=status.HTTP_200_OK)
 
 class PosicaoEstoqueView(generics.ListAPIView):
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     serializer_class = ProdutoSerializer # Reutiliza o serializer de Produto para a posição
 
     def get_queryset(self):

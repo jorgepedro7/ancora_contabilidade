@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.core.permissions import IsActiveCompany
+from backend.apps.core.permissions import IsBackofficeCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import ObrigacaoFiscal
 from .serializers import ObrigacaoFiscalSerializer
@@ -11,7 +11,7 @@ from datetime import date, timedelta
 class ObrigacaoFiscalViewSet(viewsets.ModelViewSet):
     queryset = ObrigacaoFiscal.objects.all()
     serializer_class = ObrigacaoFiscalSerializer
-    permission_classes = [IsActiveCompany]
+    permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['tipo_obrigacao', 'status', 'data_vencimento', 'empresa']
     search_fields = ['descricao']
