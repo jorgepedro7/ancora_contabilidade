@@ -174,4 +174,9 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
-PROMPT_ANCORA_CLI.md 
+PROMPT_ANCORA_CLI.md
+
+# Arquivos de backup de merge
+*.premergebak
+**/*.premergebak
+.codex.premergebak 

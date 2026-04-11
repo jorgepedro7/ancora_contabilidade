@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/contabil/', include('backend.apps.contabil.urls')),
     path('api/obrigacoes/', include('backend.apps.obrigacoes.urls')),
     path('api/intake/', include('backend.apps.intake.urls')),
+    path('api/relatorios/', include('backend.apps.relatorios.urls')),
 ]
 
 if settings.DEBUG:

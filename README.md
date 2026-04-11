@@ -1,53 +1,62 @@
 # Âncora Contabilidade
 
-Sistema de Gestão Contábil moderno focado em robustez, automação e conformidade (eSocial/Fiscal).
+Sistema de gestão contábil do escritório **Âncora Contabilidade**. Instalação única (single-tenant) que gerencia a carteira de empresas-clientes do escritório, integrando fiscal, financeiro, folha, contábil, estoque e portal de recebimento de documentos.
 
-## 🚀 Funcionalidades Atuais
+## Módulos
 
-- **Módulo de Folha de Pagamento**:
-  - Cadastro completo de funcionários e contratos.
-  - Motor de cálculo automático (INSS, IRRF, FGTS, Horas Extras, DSR).
-  - Gestão de cartões de ponto e ocorrências (atestados, faltas).
-  - Emissão de holerites em PDF.
-- **Gestão Multi-Empresa**: Arquitetura pronta para múltiplos tenants com separação total de dados.
-- **GED (Gestão Eletrônica de Documentos)**: Prontuário digital de funcionários.
-- **Integrações**: Pronto para integração com sistemas fiscais e bancários.
+| Módulo | Funcionalidades |
+|---|---|
+| **Empresas** | Cadastro da carteira de clientes, regime tributário, certificado digital, configuração SEFAZ |
+| **Fiscal** | NF-e / NFC-e — emissão, autorização SEFAZ, cancelamento, CC-e, DANFE em PDF |
+| **Financeiro** | Contas a pagar/receber, fluxo de caixa, contas bancárias, plano de contas |
+| **Estoque** | Movimentações, posição por produto, lotes, inventário |
+| **Folha de Pagamento** | Funcionários, contratos, cálculo de INSS/IRRF/FGTS, holerite PDF, registro de ponto |
+| **Contábil** | Lançamentos, DRE, Balanço Patrimonial, SPED |
+| **Obrigações** | Calendário fiscal, DARF, PGDAS-D, alertas de vencimento |
+| **Central de Recebimentos (Intake)** | Portal para clientes enviarem documentos, checklist por competência, exportação para Questor |
+| **Relatórios** | DRE simplificado, livro fiscal, posição de estoque, folha por competência |
 
-## 🛠️ Tecnologias
+## Stack
 
-- **Backend**: Django 4.2 + Django REST Framework.
-- **Frontend**: Vue.js 3 + Vite + Tailwind CSS / Vanilla CSS.
-- **Banco de Dados**: PostgreSQL.
-- **Fila de Tarefas**: Celery + Redis.
-- **Infraestrutura**: Docker & Docker Compose.
-- **PDF**: ReportLab.
+- **Backend**: Django 4.2 + Django REST Framework + JWT (simplejwt)
+- **Frontend**: Vue.js 3 + Vite + Pinia + Tailwind CSS
+- **Banco**: PostgreSQL 15
+- **Tarefas assíncronas**: Celery + Redis
+- **Infraestrutura**: Docker Compose + Nginx + Gunicorn
+- **PDF**: ReportLab
 
-## 📦 Como rodar o projeto
+## Como rodar
 
 ### Pré-requisitos
-- Docker e Docker Compose instalados.
+- Docker e Docker Compose instalados
 
 ### Passos
-1. Clone o repositório.
-2. Crie um arquivo `.env` na raiz (use o `.env.example` como base).
-3. Suba os containers:
-   ```bash
-   docker-compose up -d --build
-   ```
-4. Execute as migrações do banco:
-   ```bash
-   docker-compose exec backend python manage.py migrate
-   ```
-5. Crie um superusuário:
-   ```bash
-   docker-compose exec backend python manage.py createsuperuser
-   ```
-6. (Opcional) Popule o sistema com dados de teste para a Folha:
-   ```bash
-   docker-compose exec backend python manage.py seed_payroll
-   ```
 
-Acesse o sistema em: `http://localhost`
+```bash
+# 1. Clone e configure o ambiente
+cp .env.example .env
 
-## 📄 Licença
-Este projeto é para uso interno da Âncora Contabilidade.
+# 2. Suba os containers
+docker-compose up -d --build
+
+# 3. Execute as migrações
+docker-compose exec backend python manage.py migrate
+
+# 4. Crie um superusuário
+docker-compose exec backend python manage.py createsuperuser
+
+# 5. (Opcional) Popule com dados de teste
+docker-compose exec backend python manage.py seed_payroll
+```
+
+Acesse em: `http://localhost`
+
+## Arquitetura
+
+O sistema é **single-tenant** — uma instalação por escritório de contabilidade. A separação de dados é por **empresa-cliente** (campo `empresa` em todos os models). Usuários do backoffice (contadores) têm perfil `ADMIN`, `CONTADOR`, `AUXILIAR`, `FINANCEIRO` ou `CONSULTA` por empresa. Clientes do escritório têm perfil `CLIENTE` e acesso restrito ao portal de intake.
+
+O header `X-Empresa-Id` define o contexto da empresa ativa em cada requisição à API.
+
+## Licença
+
+Uso interno — Âncora Contabilidade.
