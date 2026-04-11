@@ -1,14 +1,16 @@
 // tailwind.config.js — cores da Âncora Contabilidade
 module.exports = {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         ancora: {
-          gold:    '#C6A348',  // Dourado Institucional
-          black:   '#111111',  // Preto Institucional
-          white:   '#FFFFFF',  // Branco Oficial
-          navy:    '#0F1E3A',  // Azul Marinho
+          // Usa CSS variables com suporte a modificadores de opacidade (/20, /50, etc.)
+          gold:  'rgb(var(--ancora-gold) / <alpha-value>)',
+          black: 'rgb(var(--ancora-black) / <alpha-value>)',
+          white: 'rgb(var(--ancora-white) / <alpha-value>)',
+          navy:  'rgb(var(--ancora-navy) / <alpha-value>)',
         }
       },
       fontFamily: {

@@ -2,45 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar for better aesthetics */
+/* =====================================================
+   Variáveis de tema — canais RGB para suporte a opacidade
+   ===================================================== */
+
+/* Tema escuro (padrão) */
+:root, .dark {
+  --ancora-gold:  198 163 72;   /* #C6A348 */
+  --ancora-black: 17 17 17;     /* #111111 */
+  --ancora-white: 255 255 255;  /* #FFFFFF */
+  --ancora-navy:  15 30 58;     /* #0F1E3A */
+
+  --color-text:         255 255 255;
+  --color-text-muted:   156 163 175;  /* gray-400 */
+  --color-text-subtle:  107 114 128;  /* gray-500 */
+  --scrollbar-track:    #111111;
+  --scrollbar-thumb:    #0F1E3A;
+}
+
+/* Tema claro */
+.light {
+  --ancora-gold:  198 163 72;   /* dourado permanece */
+  --ancora-black: 248 247 244;  /* #F8F7F4 — fundo creme */
+  --ancora-white: 17 17 17;     /* #111111 — texto escuro */
+  --ancora-navy:  232 228 219;  /* #E8E4DB — superfície secundária */
+
+  --color-text:         17 17 17;
+  --color-text-muted:   75 85 99;    /* gray-600 */
+  --color-text-subtle:  107 114 128; /* gray-500 */
+  --scrollbar-track:    #F8F7F4;
+  --scrollbar-thumb:    #C6A348;
+}
+
+/* =====================================================
+   Scrollbar personalizada
+   ===================================================== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #111111; /* Preto Institucional */
+  background: var(--scrollbar-track);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #0F1E3A; /* Azul Marinho (Apoio) */
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #C6A348; /* Dourado Institucional */
+  background: #C6A348;
 }
 
-/* Base styles for the entire application */
+/* =====================================================
+   Base
+   ===================================================== */
 html, body, #app {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent global scrollbars if content is managed by flex */
 }
 
 body {
-  @apply bg-ancora-black text-white font-body;
+  @apply bg-ancora-black font-body;
+  color: rgb(var(--color-text));
 }
 
 h1, h2, h3, h4, h5, h6 {
   @apply font-display;
 }
 
-/* Any other global styles you want to apply */
-
-/* For RouterLink active class styling, can be applied globally or per component */
-.router-link-active {
-  /* Example styling */
-  /* @apply text-ancora-gold; */
-}
+/* Textos adaptativos ao tema */
+.light .text-white   { color: rgb(17 17 17) !important; }
+.light .text-gray-300 { color: rgb(75 85 99) !important; }
+.light .text-gray-400 { color: rgb(107 114 128) !important; }
+.light .text-gray-500 { color: rgb(107 114 128) !important; }

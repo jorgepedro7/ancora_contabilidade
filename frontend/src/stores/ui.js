@@ -6,6 +6,25 @@ export const useUiStore = defineStore('ui', () => {
   const notification = ref(null) // { message: '...', type: 'success/error/warning' }
   let notificationTimeoutId = null
 
+  // Tema: 'dark' (padrão) ou 'light'
+  const theme = ref(localStorage.getItem('ancora-theme') || 'dark')
+
+  function applyTheme(value) {
+    const html = document.documentElement
+    html.classList.remove('dark', 'light')
+    html.classList.add(value)
+  }
+
+  function toggleTheme() {
+    theme.value = theme.value === 'dark' ? 'light' : 'dark'
+    localStorage.setItem('ancora-theme', theme.value)
+    applyTheme(theme.value)
+  }
+
+  function initTheme() {
+    applyTheme(theme.value)
+  }
+
   function setLoading(state) {
     isLoading.value = state
   }
@@ -15,9 +34,7 @@ export const useUiStore = defineStore('ui', () => {
       clearTimeout(notificationTimeoutId)
       notificationTimeoutId = null
     }
-
     notification.value = { message, type }
-
     if (duration > 0) {
       notificationTimeoutId = setTimeout(() => {
         notification.value = null
@@ -34,5 +51,9 @@ export const useUiStore = defineStore('ui', () => {
     notification.value = null
   }
 
-  return { isLoading, notification, setLoading, showNotification, clearNotification }
+  return {
+    isLoading, notification, theme,
+    setLoading, showNotification, clearNotification,
+    toggleTheme, initTheme,
+  }
 })
