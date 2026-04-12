@@ -78,6 +78,11 @@ class CadastrosService {
     const response = await api.delete(`/cadastros/produtos/${id}/`)
     return response.data
   }
+
+  async buscarCep(cep) {
+    const response = await api.get(`/empresas/buscar-cep/?cep=${cep}`)
+    return response.data
+  }
 }
 
 export default new CadastrosService()
