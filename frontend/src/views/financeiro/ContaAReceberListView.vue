@@ -1,348 +1,415 @@
 <template>
   <div class="p-4">
-    <h1 class="text-3xl font-display text-ancora-gold mb-6">Contas a Receber</h1>
-
-    <div v-if="loading" class="text-center text-gray-400">Carregando contas a receber...</div>
-    <div v-if="error" class="text-red-500 text-center">{{ error }}</div>
-
-    <div class="mb-6 flex justify-between items-center">
-      <input type="text" v-model="searchQuery" @input="fetchContasAReceber" placeholder="Buscar conta por descrição ou cliente..."
-             class="flex-1 px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
-      <button @click="openModalForCreate"
-              class="ml-4 px-4 py-2 bg-ancora-gold text-ancora-black font-bold rounded-md hover:bg-ancora-gold/90 transition-colors">
-        Nova Conta a Receber
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-display text-ancora-gold mb-1">Contas a Receber</h1>
+        <p class="text-sm text-gray-400">Créditos a receber da empresa ativa.</p>
+      </div>
+      <button @click="openCreateModal"
+              class="px-4 py-2 bg-ancora-gold text-ancora-black font-bold rounded-md hover:bg-ancora-gold/90 transition-colors">
+        + Nova Conta
       </button>
     </div>
 
-    <div v-if="contasAReceber.length > 0" class="overflow-x-auto rounded-lg shadow-md">
+    <!-- Filtros -->
+    <div class="mb-4 flex flex-wrap gap-3">
+      <input type="text" v-model="searchQuery" @input="fetchContas"
+             placeholder="Buscar por descrição ou cliente..."
+             class="flex-1 min-w-48 px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+      <select v-model="filterStatus" @change="fetchContas"
+              class="px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm">
+        <option value="">Todos</option>
+        <option value="ABERTA">Aberta</option>
+        <option value="PARCIAL">Parcial</option>
+        <option value="PAGA_RECEBIDA">Recebida</option>
+        <option value="CANCELADA">Cancelada</option>
+      </select>
+    </div>
+
+    <div v-if="loading" class="text-center text-gray-400 py-6">Carregando...</div>
+
+    <div v-if="contas.length > 0" class="overflow-x-auto rounded-lg shadow-md">
       <table class="min-w-full bg-ancora-black/50 text-white">
         <thead>
-        <tr class="bg-ancora-navy text-ancora-gold uppercase text-sm leading-normal">
-          <th class="py-3 px-6 text-left">Descrição</th>
-          <th class="py-3 px-6 text-left">Cliente</th>
-          <th class="py-3 px-6 text-left">Vencimento</th>
-          <th class="py-3 px-6 text-right">Valor Total</th>
-          <th class="py-3 px-6 text-right">Valor Recebido</th>
-          <th class="py-3 px-6 text-right">Saldo</th>
-          <th class="py-3 px-6 text-left">Status</th>
-          <th class="py-3 px-6 text-center">Ações</th>
-        </tr>
+          <tr class="bg-ancora-navy text-ancora-gold uppercase text-sm leading-normal">
+            <th class="py-3 px-4 text-left">Descrição</th>
+            <th class="py-3 px-4 text-left">Cliente</th>
+            <th class="py-3 px-4 text-left">Vencimento</th>
+            <th class="py-3 px-4 text-left">Parcela</th>
+            <th class="py-3 px-4 text-right">Total</th>
+            <th class="py-3 px-4 text-right">Recebido</th>
+            <th class="py-3 px-4 text-right">Saldo</th>
+            <th class="py-3 px-4 text-left">Status</th>
+            <th class="py-3 px-4 text-center">Ações</th>
+          </tr>
         </thead>
-        <tbody class="text-gray-300 text-sm font-body">
-        <tr v-for="conta in contasAReceber" :key="conta.id" class="border-b border-ancora-navy hover:bg-ancora-black/70">
-          <td class="py-3 px-6 text-left whitespace-nowrap">{{ conta.descricao }}</td>
-          <td class="py-3 px-6 text-left">{{ conta.cliente_detail?.nome_razao_social }}</td>
-          <td class="py-3 px-6 text-left">{{ formatDate(conta.data_vencimento) }}</td>
-          <td class="py-3 px-6 text-right">{{ formatCurrency(conta.valor_total) }}</td>
-          <td class="py-3 px-6 text-right">{{ formatCurrency(conta.valor_recebido) }}</td>
-          <td class="py-3 px-6 text-right">{{ formatCurrency(conta.valor_saldo) }}</td>
-          <td class="py-3 px-6 text-left">
-            <span :class="getStatusClass(conta.status)" class="px-2 py-1 rounded-full text-xs text-white">
-              {{ conta.status_display }}
-            </span>
-          </td>
-          <td class="py-3 px-6 text-center whitespace-nowrap">
-            <button @click="openModalForEdit(conta)" class="text-ancora-gold hover:text-ancora-gold/80 font-bold mr-3">Editar</button>
-            <button @click="openReceberModal(conta)" v-if="conta.status !== 'PAGA_RECEBIDA'" class="text-green-500 hover:text-green-400 font-bold mr-3">Receber</button>
-            <button @click="deleteConta(conta.id)" class="text-red-500 hover:text-red-400 font-bold">Excluir</button>
-          </td>
-        </tr>
+        <tbody class="text-sm font-body">
+          <tr v-for="conta in contas" :key="conta.id"
+              :class="conta.esta_vencida ? 'bg-red-900/20 border-b border-red-900/30' : 'border-b border-ancora-navy hover:bg-ancora-black/70'"
+              class="text-gray-300">
+            <td class="py-3 px-4 whitespace-nowrap">
+              <div>{{ conta.descricao }}</div>
+              <div v-if="conta.esta_vencida" class="text-xs text-red-400 font-semibold">VENCIDA</div>
+            </td>
+            <td class="py-3 px-4">{{ conta.cliente_detail?.nome_razao_social }}</td>
+            <td class="py-3 px-4" :class="conta.esta_vencida ? 'text-red-400' : ''">{{ formatDate(conta.data_vencimento) }}</td>
+            <td class="py-3 px-4 text-center text-xs">{{ conta.parcela_atual }}/{{ conta.total_parcelas }}</td>
+            <td class="py-3 px-4 text-right font-mono">{{ formatCurrency(conta.valor_total) }}</td>
+            <td class="py-3 px-4 text-right font-mono">{{ formatCurrency(conta.valor_recebido) }}</td>
+            <td class="py-3 px-4 text-right font-mono font-bold">{{ formatCurrency(conta.valor_saldo) }}</td>
+            <td class="py-3 px-4">
+              <span :class="statusClass(conta.status)" class="px-2 py-0.5 rounded-full text-xs font-semibold text-white">
+                {{ statusLabel(conta.status) }}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center whitespace-nowrap">
+              <button @click="openEditModal(conta)" class="text-ancora-gold hover:text-ancora-gold/80 font-bold mr-2">Editar</button>
+              <button v-if="conta.status !== 'PAGA_RECEBIDA' && conta.status !== 'CANCELADA'"
+                      @click="openReceberModal(conta)"
+                      class="text-green-400 hover:text-green-300 font-bold mr-2">Receber</button>
+              <button @click="openDeleteModal(conta)" class="text-red-500 hover:text-red-400 font-bold">Excluir</button>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
-    <div v-else-if="!loading && !error" class="text-center text-gray-400 mt-8">
-      Nenhuma conta a receber encontrada.
-    </div>
+    <div v-else-if="!loading" class="text-center text-gray-400 mt-8">Nenhuma conta a receber encontrada.</div>
 
-    <!-- Modal para Adicionar/Editar Conta a Receber -->
+    <!-- Modal Criar/Editar -->
     <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
-      <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
-        <h2 class="text-2xl font-display text-ancora-gold mb-4">{{ editingConta ? 'Editar Conta a Receber' : 'Nova Conta a Receber' }}</h2>
-        <form @submit.prevent="saveContaAReceber" class="space-y-4">
-          <div>
-            <label for="modal_descricao" class="block text-sm font-body text-gray-300">Descrição</label>
-            <input type="text" id="modal_descricao" v-model="currentConta.descricao" required
-                   class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
+      <div class="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-6 shadow-xl">
+        <h2 class="text-2xl font-display text-ancora-gold mb-5">{{ editingConta ? 'Editar Conta a Receber' : 'Nova Conta a Receber' }}</h2>
+        <form @submit.prevent="saveConta" class="space-y-4">
+
+          <p class="text-xs uppercase tracking-wide text-gray-500">Dados Principais</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-sm text-gray-300 mb-1">Descrição *</label>
+              <input type="text" v-model="form.descricao" required
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Cliente *</label>
+              <select v-model="form.cliente" required
+                      class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm">
+                <option :value="null" disabled>Selecione...</option>
+                <option v-for="c in clientesList" :key="c.id" :value="c.id">{{ c.nome_razao_social }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Conta Contábil (Receita) *</label>
+              <select v-model="form.conta_contabil" required
+                      class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm">
+                <option :value="null" disabled>Selecione...</option>
+                <option v-for="pc in planoContasList" :key="pc.id" :value="pc.id">{{ pc.codigo }} - {{ pc.descricao }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Valor Total (R$) *</label>
+              <input type="number" step="0.01" min="0.01" v-model="form.valor_total" required
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Data de Vencimento *</label>
+              <input type="date" v-model="form.data_vencimento" required
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
           </div>
-          <div>
-            <label for="modal_valor_total" class="block text-sm font-body text-gray-300">Valor Total</label>
-            <input type="number" step="0.01" id="modal_valor_total" v-model="currentConta.valor_total" required
-                   class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
+
+          <p class="text-xs uppercase tracking-wide text-gray-500 pt-2">Parcelamento</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Parcela Atual</label>
+              <input type="number" min="1" v-model="form.parcela_atual"
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Total de Parcelas</label>
+              <input type="number" min="1" v-model="form.total_parcelas"
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
           </div>
-          <div>
-            <label for="modal_data_vencimento" class="block text-sm font-body text-gray-300">Data de Vencimento</label>
-            <input type="date" id="modal_data_vencimento" v-model="currentConta.data_vencimento" required
-                   class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
+
+          <p class="text-xs uppercase tracking-wide text-gray-500 pt-2">Encargos</p>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Juros (R$)</label>
+              <input type="number" step="0.01" min="0" v-model="form.juros"
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Multa (R$)</label>
+              <input type="number" step="0.01" min="0" v-model="form.multa"
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-300 mb-1">Desconto (R$)</label>
+              <input type="number" step="0.01" min="0" v-model="form.desconto"
+                     class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            </div>
           </div>
+
           <div>
-            <label for="modal_cliente" class="block text-sm font-body text-gray-300">Cliente</label>
-            <select id="modal_cliente" v-model="currentConta.cliente" required
-                    class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white">
-              <option v-for="cli in clientesList" :key="cli.id" :value="cli.id">{{ cli.nome_razao_social }}</option>
-            </select>
+            <label class="block text-sm text-gray-300 mb-1">Observações</label>
+            <textarea v-model="form.observacoes" rows="2"
+                      class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white text-sm"></textarea>
           </div>
-          <div>
-            <label for="modal_conta_contabil" class="block text-sm font-body text-gray-300">Conta Contábil (Receita)</label>
-            <select id="modal_conta_contabil" v-model="currentConta.conta_contabil" required
-                    class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white">
-              <option v-for="pc in planoContasList" :key="pc.id" :value="pc.id">{{ pc.codigo }} - {{ pc.descricao }}</option>
-            </select>
-          </div>
-          
-          <div class="flex justify-end space-x-4">
-            <button type="button" @click="closeModal"
-                    class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">Cancelar</button>
-            <button type="submit" :disabled="uiStore.isLoading"
-                    class="px-4 py-2 bg-ancora-gold text-ancora-black font-bold rounded-md hover:bg-ancora-gold/90 transition-colors">
-              <span v-if="uiStore.isLoading">Salvando...</span>
-              <span v-else>Salvar Conta</span>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button type="button" @click="closeModal" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancelar</button>
+            <button type="submit" :disabled="saving"
+                    class="px-4 py-2 bg-ancora-gold text-ancora-black font-bold rounded-md hover:bg-ancora-gold/90 disabled:opacity-50">
+              {{ saving ? 'Salvando...' : 'Salvar' }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Modal para Receber Conta -->
-    <div v-if="isReceberModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ancora-black/70 p-4">
-      <div class="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-lg border border-ancora-gold/30 bg-ancora-black/90 p-8 shadow-xl">
-        <h2 class="text-2xl font-display text-ancora-gold mb-4">Receber Conta: {{ contaToReceber.descricao }}</h2>
-        <form @submit.prevent="submitReceber" class="space-y-4">
+    <!-- Modal Receber -->
+    <div v-if="receberModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-ancora-black/70 p-4">
+      <div class="w-full max-w-md rounded-lg border border-green-500/30 bg-ancora-black/95 p-6 shadow-xl">
+        <h3 class="text-lg font-display text-green-400 mb-1">Registrar Recebimento</h3>
+        <p class="text-sm text-gray-400 mb-4">{{ receberModal.descricao }}</p>
+        <div class="space-y-4">
           <div>
-            <label for="receber_valor" class="block text-sm font-body text-gray-300">Valor a Receber</label>
-            <input type="number" step="0.01" id="receber_valor" v-model="valorReceber" :max="contaToReceber.valor_saldo" required
-                   class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white"/>
-            <p class="text-xs text-gray-400">Saldo restante: {{ formatCurrency(contaToReceber.valor_saldo) }}</p>
+            <label class="block text-sm text-gray-300 mb-1">Valor a Receber (R$) *</label>
+            <input type="number" step="0.01" min="0.01" :max="receberModal.saldo" v-model="receberModal.valor"
+                   class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm"/>
+            <p class="text-xs text-gray-500 mt-1">Saldo: {{ formatCurrency(receberModal.saldo) }}</p>
           </div>
           <div>
-            <label for="receber_conta_bancaria" class="block text-sm font-body text-gray-300">Conta Bancária</label>
-            <select id="receber_conta_bancaria" v-model="contaBancariaReceberId" required
-                    class="mt-1 block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md shadow-sm focus:outline-none focus:ring-ancora-gold focus:border-ancora-gold sm:text-sm text-white">
-              <option v-for="contaB in contasBancariasList" :key="contaB.id" :value="contaB.id">{{ contaB.descricao }} (Saldo: {{ formatCurrency(contaB.saldo_atual) }})</option>
+            <label class="block text-sm text-gray-300 mb-1">Conta Bancária *</label>
+            <select v-model="receberModal.contaBancariaId"
+                    class="block w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white sm:text-sm">
+              <option :value="null" disabled>Selecione...</option>
+              <option v-for="cb in contasBancariasList" :key="cb.id" :value="cb.id">
+                {{ cb.descricao }} ({{ formatCurrency(cb.saldo_atual) }})
+              </option>
             </select>
           </div>
-          <div class="flex justify-end space-x-4">
-            <button type="button" @click="closeReceberModal"
-                    class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">Cancelar</button>
-            <button type="submit" :disabled="uiStore.isLoading"
-                    class="px-4 py-2 bg-green-500 text-white font-bold rounded-md hover:bg-green-600 transition-colors">
-              <span v-if="uiStore.isLoading">Processando...</span>
-              <span v-else>Confirmar Recebimento</span>
-            </button>
-          </div>
-        </form>
+        </div>
+        <div class="flex justify-end gap-3 mt-5">
+          <button @click="receberModal.open = false" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancelar</button>
+          <button @click="confirmarReceber" :disabled="saving || !receberModal.contaBancariaId"
+                  class="px-4 py-2 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:opacity-50">
+            {{ saving ? 'Processando...' : 'Confirmar Recebimento' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Excluir -->
+    <div v-if="deleteModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-ancora-black/80 p-4">
+      <div class="w-full max-w-md rounded-lg border border-red-500/30 bg-ancora-black/95 p-6 shadow-xl">
+        <h3 class="text-lg font-display text-red-400 mb-2">Confirmar Exclusão</h3>
+        <p class="text-sm text-gray-300 mb-4">
+          Excluir a conta <span class="font-bold text-white">{{ deleteModal.descricao }}</span>? (soft delete)
+        </p>
+        <div class="flex justify-end gap-3">
+          <button @click="deleteModal.open = false" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancelar</button>
+          <button @click="confirmarDelete" :disabled="saving"
+                  class="px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 disabled:opacity-50">
+            {{ saving ? 'Excluindo...' : 'Excluir' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import FinanceiroService from '@/services/financeiro.service'
-import CadastrosService from '@/services/cadastros.service' // Para buscar clientes
+import CadastrosService from '@/services/cadastros.service'
+import { extractApiErrorMessage } from '@/utils/api'
 
 const uiStore = useUiStore()
 
-const contasAReceber = ref([])
+const contas = ref([])
 const loading = ref(false)
-const error = ref(null)
+const saving = ref(false)
 const searchQuery = ref('')
+const filterStatus = ref('')
+
+const clientesList = ref([])
+const planoContasList = ref([])
+const contasBancariasList = ref([])
 
 const isModalOpen = ref(false)
 const editingConta = ref(false)
-const currentConta = ref({
+
+const emptyForm = () => ({
   id: null,
   descricao: '',
   valor_total: 0,
   data_vencimento: '',
   cliente: null,
   conta_contabil: null,
+  parcela_atual: 1,
+  total_parcelas: 1,
+  juros: 0,
+  multa: 0,
+  desconto: 0,
+  observacoes: '',
 })
 
-const clientesList = ref([])
-const planoContasList = ref([])
-const contasBancariasList = ref([])
+const form = reactive(emptyForm())
 
-// Receber Modal
-const isReceberModalOpen = ref(false)
-const contaToReceber = ref({})
-const valorReceber = ref(0)
-const contaBancariaReceberId = ref(null)
-
+const receberModal = reactive({ open: false, id: null, descricao: '', saldo: 0, valor: 0, contaBancariaId: null })
+const deleteModal = reactive({ open: false, id: null, descricao: '' })
 
 onMounted(() => {
-  fetchContasAReceber()
-  fetchClientesList()
-  fetchPlanoContasList()
-  fetchContasBancariasList()
+  fetchContas()
+  loadClientes()
+  loadPlanoContas()
+  loadContasBancarias()
 })
 
-async function fetchContasAReceber() {
+async function fetchContas() {
   loading.value = true
-  error.value = null
   try {
-    const response = await FinanceiroService.getContasAReceber({ search: searchQuery.value })
-    contasAReceber.value = response.results.map(conta => ({
-      ...conta,
-      status_display: getStatusDisplay(conta.status),
-      data_vencimento: conta.data_vencimento,
-    }))
-  } catch (err) {
-    error.value = 'Falha ao carregar contas a receber.'
-    uiStore.showNotification(error.value, 'error')
-    console.error('Erro ao carregar contas a receber:', err)
+    const params = { search: searchQuery.value }
+    if (filterStatus.value) params.status = filterStatus.value
+    const response = await FinanceiroService.getContasAReceber(params)
+    contas.value = response.results
+  } catch {
+    uiStore.showNotification('Falha ao carregar contas a receber.', 'error')
   } finally {
     loading.value = false
   }
 }
 
-async function fetchClientesList() {
+async function loadClientes() {
   try {
-    const response = await CadastrosService.getClientes({ page_size: 1000, ativo: true })
-    clientesList.value = response.results
-  } catch (err) {
-    console.error('Erro ao carregar lista de clientes:', err)
-  }
+    const r = await CadastrosService.getClientes({ page_size: 500 })
+    clientesList.value = r.results
+  } catch { /* silencioso */ }
 }
 
-async function fetchPlanoContasList() {
+async function loadPlanoContas() {
   try {
-    const response = await FinanceiroService.getPlanosContas({ page_size: 1000, tipo_conta: 'RC', ativo: true }) // Busca apenas contas de receita
-    planoContasList.value = response.results
-  } catch (err) {
-    console.error('Erro ao carregar plano de contas:', err)
-  }
+    const r = await FinanceiroService.getPlanosContas({ page_size: 500, tipo_conta: 'RC' })
+    planoContasList.value = r.results
+  } catch { /* silencioso */ }
 }
 
-async function fetchContasBancariasList() {
+async function loadContasBancarias() {
   try {
-    const response = await FinanceiroService.getContasBancarias({ page_size: 1000, ativo: true })
-    contasBancariasList.value = response.results
-  } catch (err) {
-    console.error('Erro ao carregar contas bancárias:', err)
-  }
+    const r = await FinanceiroService.getContasBancarias({ page_size: 100 })
+    contasBancariasList.value = r.results
+  } catch { /* silencioso */ }
 }
 
-function getStatusClass(status) {
-  switch (status) {
-    case 'ABERTA': return 'bg-blue-500';
-    case 'PARCIAL': return 'bg-yellow-500';
-    case 'PAGA_RECEBIDA': return 'bg-green-500';
-    case 'CANCELADA': return 'bg-gray-500';
-    default: return 'bg-gray-500';
-  }
-}
-
-function getStatusDisplay(status) {
-  const choices = {
-    'ABERTA': 'Aberta',
-    'PARCIAL': 'Recebida Parcialmente',
-    'PAGA_RECEBIDA': 'Recebida',
-    'CANCELADA': 'Cancelada',
-  }
-  return choices[status] || status
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
-}
-
-function formatDate(dateString) {
-  if (!dateString) return '';
-  const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
-  return new Date(dateString).toLocaleDateString('pt-BR', options);
-}
-
-function openModalForCreate() {
+function openCreateModal() {
   editingConta.value = false
-  currentConta.value = {
-    id: null,
-    descricao: '',
-    valor_total: 0,
-    data_vencimento: '',
-    cliente: null,
-    conta_contabil: null,
-  }
+  Object.assign(form, emptyForm())
   isModalOpen.value = true
 }
 
-function openModalForEdit(conta) {
+function openEditModal(conta) {
   editingConta.value = true
-  currentConta.value = { ...conta }
+  Object.assign(form, emptyForm(), {
+    id: conta.id,
+    descricao: conta.descricao,
+    valor_total: conta.valor_total,
+    data_vencimento: conta.data_vencimento,
+    cliente: conta.cliente,
+    conta_contabil: conta.conta_contabil,
+    parcela_atual: conta.parcela_atual,
+    total_parcelas: conta.total_parcelas,
+    juros: conta.juros,
+    multa: conta.multa,
+    desconto: conta.desconto,
+    observacoes: conta.observacoes || '',
+  })
   isModalOpen.value = true
 }
 
-function closeModal() {
-  isModalOpen.value = false
-}
+function closeModal() { isModalOpen.value = false }
 
-async function saveContaAReceber() {
-  uiStore.setLoading(true)
+async function saveConta() {
+  saving.value = true
   try {
-    const payload = {
-      ...currentConta.value,
-      cliente: currentConta.value.cliente,
-      conta_contabil: currentConta.value.conta_contabil,
-    }
     if (editingConta.value) {
-      await FinanceiroService.updateContaAReceber(currentConta.value.id, payload)
-      uiStore.showNotification('Conta a Receber atualizada com sucesso!', 'success')
+      await FinanceiroService.updateContaAReceber(form.id, { ...form })
+      uiStore.showNotification('Conta atualizada!', 'success')
     } else {
-      await FinanceiroService.createContaAReceber(payload)
-      uiStore.showNotification('Conta a Receber criada com sucesso!', 'success')
+      await FinanceiroService.createContaAReceber({ ...form })
+      uiStore.showNotification('Conta criada!', 'success')
     }
     closeModal()
-    fetchContasAReceber() // Recarregar a lista
+    await fetchContas()
   } catch (err) {
-    uiStore.showNotification('Erro ao salvar conta a receber.', 'error')
-    console.error('Erro ao salvar conta a receber:', err)
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao salvar conta.'), 'error', 6000)
   } finally {
-    uiStore.setLoading(false)
-  }
-}
-
-async function deleteConta(id) {
-  if (confirm('Tem certeza que deseja excluir esta conta a receber? (Soft delete)')) {
-    uiStore.setLoading(true)
-    try {
-      await FinanceiroService.deleteContaAReceber(id)
-      uiStore.showNotification('Conta a Receber excluída com sucesso!', 'success')
-      fetchContasAReceber()
-    } catch (err) {
-      uiStore.showNotification('Erro ao excluir conta a receber.', 'error')
-      console.error('Erro ao excluir conta a receber:', err)
-    } finally {
-      uiStore.setLoading(false)
-    }
+    saving.value = false
   }
 }
 
 function openReceberModal(conta) {
-  contaToReceber.value = { ...conta }
-  valorReceber.value = conta.valor_saldo
-  contaBancariaReceberId.value = contasBancariasList.value.length > 0 ? contasBancariasList.value[0].id : null; // Seleciona a primeira por padrão
-  isReceberModalOpen.value = true
+  receberModal.open = true
+  receberModal.id = conta.id
+  receberModal.descricao = conta.descricao
+  receberModal.saldo = Number(conta.valor_saldo)
+  receberModal.valor = Number(conta.valor_saldo)
+  receberModal.contaBancariaId = contasBancariasList.value[0]?.id || null
 }
 
-function closeReceberModal() {
-  isReceberModalOpen.value = false
-}
-
-async function submitReceber() {
-  uiStore.setLoading(true)
+async function confirmarReceber() {
+  saving.value = true
   try {
-    await FinanceiroService.receberContaAReceber(contaToReceber.value.id, {
-      valor: valorReceber.value,
-      conta_bancaria_id: contaBancariaReceberId.value
+    await FinanceiroService.receberContaAReceber(receberModal.id, {
+      valor: receberModal.valor,
+      conta_bancaria_id: receberModal.contaBancariaId,
     })
-    uiStore.showNotification('Recebimento registrado com sucesso!', 'success')
-    closeReceberModal()
-    fetchContasAReceber() // Recarregar a lista
+    uiStore.showNotification('Recebimento registrado!', 'success')
+    receberModal.open = false
+    await fetchContas()
+    await loadContasBancarias()
   } catch (err) {
-    uiStore.showNotification('Erro ao registrar recebimento.', 'error')
-    console.error('Erro ao registrar recebimento.', err)
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao registrar recebimento.'), 'error', 6000)
   } finally {
-    uiStore.setLoading(false)
+    saving.value = false
   }
+}
+
+function openDeleteModal(conta) {
+  deleteModal.open = true
+  deleteModal.id = conta.id
+  deleteModal.descricao = conta.descricao
+}
+
+async function confirmarDelete() {
+  saving.value = true
+  try {
+    await FinanceiroService.deleteContaAReceber(deleteModal.id)
+    uiStore.showNotification('Conta excluída!', 'success')
+    deleteModal.open = false
+    await fetchContas()
+  } catch (err) {
+    uiStore.showNotification(extractApiErrorMessage(err, 'Erro ao excluir.'), 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+function statusClass(s) {
+  return { ABERTA: 'bg-blue-600', PARCIAL: 'bg-yellow-600', PAGA_RECEBIDA: 'bg-green-600', CANCELADA: 'bg-gray-500' }[s] || 'bg-gray-500'
+}
+
+function statusLabel(s) {
+  return { ABERTA: 'Aberta', PARCIAL: 'Parcial', PAGA_RECEBIDA: 'Recebida', CANCELADA: 'Cancelada' }[s] || s
+}
+
+function formatCurrency(v) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+}
+
+function formatDate(d) {
+  if (!d) return ''
+  const [y, m, day] = d.split('-')
+  return `${day}/${m}/${y}`
 }
 </script>

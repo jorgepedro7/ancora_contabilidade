@@ -121,6 +121,11 @@ class FinanceiroService {
     return response.data
   }
 
+  async createMovimentacaoFinanceira(data) {
+    const response = await api.post('/financeiro/movimentacoes/', data)
+    return response.data
+  }
+
   // Fluxo de Caixa
   async getFluxoCaixa(data_inicio, data_fim) {
     const response = await api.get('/financeiro/fluxo-caixa/', { params: { data_inicio, data_fim } })
