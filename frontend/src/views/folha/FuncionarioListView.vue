@@ -101,7 +101,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
-import FolhaService from '@/services/folha.service' // Precisamos criar este serviço
+import FolhaService from '@/services/folha.service'
 
 const uiStore = useUiStore()
 

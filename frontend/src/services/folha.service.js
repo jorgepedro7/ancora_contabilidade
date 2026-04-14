@@ -182,6 +182,11 @@ class FolhaService {
     return response.data
   }
 
+  async deleteJustificativa(id) {
+    const response = await api.delete(`/folha/justificativas/${id}/`)
+    return response.data
+  }
+
   // Documentos
   async getDocumentos(params = {}) {
     const response = await api.get('/folha/documentos/', { params })
