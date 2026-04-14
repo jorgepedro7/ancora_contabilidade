@@ -116,18 +116,17 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 ---
 
 ### Módulo 9 — Obrigações Acessórias (`apps/obrigacoes/`)
-**Status: ⚠️ Parcial** — *Auditado em 2026-04-13*
+**Status: ✅ Completo** — *Auditado em 2026-04-13*
 
 **Fixes aplicados:**
 - `filterset_fields`: removido `'empresa'` do filtro exposto — get_queryset já restringe ao empresa_ativa; expor o campo era redundante e potencialmente confuso
+- ObrigacaoGuiaView.vue: implementado calendário mensal com grupos colapsáveis por mês, filtro por tipo e modal de registro de pagamento
 
 **Frontend verificado:**
 - `ObrigacaoFiscalListView.vue` ✅ (CRUD completo com modal, filtro por descrição)
-- `ObrigacaoGuiaView.vue` ❌ placeholder — "Emissão de Guias (DAS, GPS, DARF) em desenvolvimento." Feature não implementada.
+- `ObrigacaoGuiaView.vue` ✅ (calendário mensal com colapsáveis, filtro por tipo, modal de registro de pagamento)
 - `obrigacoes.service.js` ✅ (todos os métodos: getObrigacoes, create, update, delete, vencendo_hoje, vencendo_proximos_dias)
 - Rotas registradas: `/obrigacoes/calendario`, `/obrigacoes/guias` ✅
-
-**Gap pendente:** `ObrigacaoGuiaView.vue` é placeholder — emissão de guias de impostos não implementada.
 
 ---
 
@@ -162,8 +161,7 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 
 ## Próximos passos sugeridos
 
-1. Implementar `ObrigacaoGuiaView.vue` (emissão de DAS, GPS, DARF) — Módulo 9
-2. Implementar Módulo 11 (Intake/Portal)
+1. Implementar Módulo 11 (Intake/Portal)
 
 ---
 
