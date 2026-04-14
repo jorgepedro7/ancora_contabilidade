@@ -1,12 +1,7 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import FolhaPagamento, HoleriteFuncionario
+from .models import FolhaPagamento
 
-# @receiver(post_save, sender=FolhaPagamento)
-# def generate_holerites_on_folha_process(sender, instance, created, **kwargs):
-#     if instance.status == 'PROCESSADA' and created:
-#         # Lógica para gerar holerites para todos os funcionários ativos da empresa
-#         # com contratos ativos na competência da folha
-#         pass
-
-# Você pode adicionar sinais aqui para atualizar totais da folha, etc.
+# Signals do módulo de Folha de Pagamento
+# Atualmente sem signals ativos — lógica de cálculo é acionada explicitamente
+# via action POST /api/folha/folha-pagamento/{id}/calcular/
