@@ -13,7 +13,7 @@ class ObrigacaoFiscalViewSet(viewsets.ModelViewSet):
     serializer_class = ObrigacaoFiscalSerializer
     permission_classes = [IsBackofficeCompany]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['tipo_obrigacao', 'status', 'data_vencimento', 'empresa']
+    filterset_fields = ['tipo_obrigacao', 'status', 'data_vencimento']
     search_fields = ['descricao']
 
     def get_queryset(self):

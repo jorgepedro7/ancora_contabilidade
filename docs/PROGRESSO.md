@@ -2,7 +2,7 @@
 
 Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão de desenvolvimento.
 
-**Última atualização:** 2026-04-13 (Módulo 8 auditado)
+**Última atualização:** 2026-04-13 (Módulos 9 e 10 auditados)
 
 ---
 
@@ -116,15 +116,39 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 ---
 
 ### Módulo 9 — Obrigações Acessórias (`apps/obrigacoes/`)
-**Status: ❌ Não verificado**
-- ObrigacaoFiscal, GuiaEmissao
-- Calendário fiscal, DARF, PGDAS-D
+**Status: ⚠️ Parcial** — *Auditado em 2026-04-13*
+
+**Fixes aplicados:**
+- `filterset_fields`: removido `'empresa'` do filtro exposto — get_queryset já restringe ao empresa_ativa; expor o campo era redundante e potencialmente confuso
+
+**Frontend verificado:**
+- `ObrigacaoFiscalListView.vue` ✅ (CRUD completo com modal, filtro por descrição)
+- `ObrigacaoGuiaView.vue` ❌ placeholder — "Emissão de Guias (DAS, GPS, DARF) em desenvolvimento." Feature não implementada.
+- `obrigacoes.service.js` ✅ (todos os métodos: getObrigacoes, create, update, delete, vencendo_hoje, vencendo_proximos_dias)
+- Rotas registradas: `/obrigacoes/calendario`, `/obrigacoes/guias` ✅
+
+**Gap pendente:** `ObrigacaoGuiaView.vue` é placeholder — emissão de guias de impostos não implementada.
 
 ---
 
 ### Módulo 10 — Relatórios (`apps/relatorios/`)
-**Status: ❌ Não verificado**
-- Dashboard, DRE simplificado, livro fiscal, posição estoque, folha por competência
+**Status: ✅ Completo** — *Auditado em 2026-04-13*
+
+**Estrutura:**
+- Sem `models.py` ou `serializers.py` — apenas views de agregação
+- Usa `garantir_empresa_padrao(request.user)` (função válida em `core/utils.py:146`)
+
+**Backend verificado:**
+- `DashboardView` ✅ (KPIs: NF-e do mês, contas vencendo, saldo bancário)
+- `DREView` ✅ (receitas/despesas por período com breakdown por conta)
+- `LivroFiscalView` ✅ (NF-e autorizadas por período com totais)
+- `PosicaoEstoqueView` ✅ (produtos com controla_estoque=True + alerta_minimo)
+- `FolhaCompetenciaView` ✅ (totais de holerites por competência YYYY-MM)
+
+**Frontend verificado:**
+- `RelatorioView.vue` ✅ (implementação real — não é placeholder; 5 seções: DRE, Livro Fiscal, Estoque, Folha, links Contábil)
+- `relatorios.service.js` ✅ (getDashboard, getDRE, getLivroFiscal, getPosicaoEstoque, getFolhaCompetencia)
+- Rota registrada: `/relatorios` ✅
 
 ---
 
@@ -138,10 +162,8 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 
 ## Próximos passos sugeridos
 
-1. Auditar e corrigir Módulo 8 (Contábil)
-2. Auditar e corrigir Módulo 9 (Obrigações)
-3. Auditar e corrigir Módulo 10 (Relatórios)
-4. Implementar Módulo 11 (Intake/Portal)
+1. Implementar `ObrigacaoGuiaView.vue` (emissão de DAS, GPS, DARF) — Módulo 9
+2. Implementar Módulo 11 (Intake/Portal)
 
 ---
 
