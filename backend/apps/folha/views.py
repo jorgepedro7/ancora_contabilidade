@@ -22,15 +22,8 @@ class BaseFolhaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     
     def get_queryset(self):
-        if not self.request.user.is_authenticated:
-            return self.queryset.none()
-            
-        if self.request.user.is_superuser:
-            return self.queryset.all()
-            
-        if self.request.user.empresa_ativa:
+        if self.request.user.is_authenticated and self.request.user.empresa_ativa:
             return self.queryset.filter(empresa=self.request.user.empresa_ativa, ativo=True)
-            
         return self.queryset.none()
 
     def perform_create(self, serializer):
