@@ -36,5 +36,7 @@ def update_produto_estoque_on_movimentacao_delete(sender, instance, **kwargs):
         elif instance.tipo_movimentacao == 'SAIDA':
             instance.produto.estoque_atual += instance.quantidade
         elif instance.tipo_movimentacao == 'AJUSTE':
+            # reverte o delta aplicado no post_save
             instance.produto.estoque_atual -= instance.quantidade
+        # TRANSFERENCIA e INVENTARIO não alteram o estoque total do produto
         instance.produto.save(update_fields=['estoque_atual'])
