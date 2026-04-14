@@ -9,11 +9,11 @@
       <div class="flex gap-2 flex-wrap">
         <button @click="openModal('ENTRADA')"
                 class="px-4 py-2 bg-green-700 text-white text-sm font-semibold rounded-md hover:bg-green-600 transition-colors">
-          + Entrada
+          Nova Entrada
         </button>
         <button @click="openModal('SAIDA')"
                 class="px-4 py-2 bg-red-700 text-white text-sm font-semibold rounded-md hover:bg-red-600 transition-colors">
-          − Saída
+          Nova Saída
         </button>
         <button @click="openModal('AJUSTE')"
                 class="px-4 py-2 bg-ancora-gold text-ancora-black text-sm font-bold rounded-md hover:bg-ancora-gold/90 transition-colors">
@@ -170,6 +170,7 @@
 import { ref, onMounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import estoqueService from '@/services/estoque.service'
+import cadastrosService from '@/services/cadastros.service'
 
 const uiStore = useUiStore()
 
@@ -214,6 +215,7 @@ async function changePage(page) {
     if (search.value) params.search = search.value
     const data = await estoqueService.listarMovimentacoes(params)
     movimentacoes.value = data.results ?? data
+    totalPages.value = data.total_pages ?? totalPages.value
   } catch (e) {
     uiStore.showNotification('Erro ao carregar página.', 'error')
   } finally {
@@ -224,7 +226,7 @@ async function changePage(page) {
 async function fetchSupport() {
   try {
     const [prod, loc] = await Promise.all([
-      estoqueService.getPosicao(),
+      cadastrosService.getProdutos(),
       estoqueService.listarLocais(),
     ])
     produtos.value = prod.results ?? prod
@@ -249,6 +251,14 @@ async function submitForm() {
     uiStore.showNotification('Produto e quantidade são obrigatórios.', 'error')
     return
   }
+  if (modalTipo.value === 'ENTRADA' && !form.value.local_destino) {
+    uiStore.showNotification('Local de destino é obrigatório para entrada.', 'error')
+    return
+  }
+  if (modalTipo.value === 'SAIDA' && !form.value.local_origem) {
+    uiStore.showNotification('Local de origem é obrigatório para saída.', 'error')
+    return
+  }
   submitting.value = true
   try {
     const payload = {
@@ -256,25 +266,15 @@ async function submitForm() {
       quantidade: form.value.quantidade,
       observacoes: form.value.observacoes || null,
     }
-
     if (modalTipo.value === 'ENTRADA') {
-      if (!form.value.local_destino) {
-        uiStore.showNotification('Local de destino é obrigatório para entrada.', 'error')
-        return
-      }
       payload.local_destino = form.value.local_destino
       await estoqueService.registrarEntrada(payload)
     } else if (modalTipo.value === 'SAIDA') {
-      if (!form.value.local_origem) {
-        uiStore.showNotification('Local de origem é obrigatório para saída.', 'error')
-        return
-      }
       payload.local_origem = form.value.local_origem
       await estoqueService.registrarSaida(payload)
     } else {
       await estoqueService.registrarAjuste(payload)
     }
-
     uiStore.showNotification('Movimentação registrada com sucesso!', 'success')
     closeModal()
     fetchMovimentacoes()
