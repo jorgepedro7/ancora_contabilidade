@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from rest_framework import viewsets, filters, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -48,9 +49,13 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response({'error': 'Produto, quantidade e local de destino são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
+            quantidade = Decimal(str(quantidade))
+        except InvalidOperation:
+            return Response({'error': 'Quantidade deve ser um número válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
             produto = Produto.objects.get(id=produto_id, empresa=empresa)
             local_destino = LocalEstoque.objects.get(id=local_destino_id, empresa=empresa)
-            quantidade = float(quantidade)
 
             mov = MovimentacaoEstoque.objects.create(
                 empresa=empresa,
@@ -63,8 +68,6 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response(MovimentacaoEstoqueSerializer(mov).data, status=status.HTTP_201_CREATED)
         except (Produto.DoesNotExist, LocalEstoque.DoesNotExist) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError as e:
-            return Response({'error': 'Quantidade deve ser um número válido.'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
     def saida(self, request):
@@ -78,9 +81,13 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response({'error': 'Produto, quantidade e local de origem são obrigatórios.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
+            quantidade = Decimal(str(quantidade))
+        except InvalidOperation:
+            return Response({'error': 'Quantidade deve ser um número válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
             produto = Produto.objects.get(id=produto_id, empresa=empresa)
             local_origem = LocalEstoque.objects.get(id=local_origem_id, empresa=empresa)
-            quantidade = float(quantidade)
 
             # Verificar se há estoque suficiente antes de registrar a saída
             if produto.estoque_atual < quantidade:
@@ -97,8 +104,6 @@ class MovimentacaoEstoqueViewSet(BaseEstoqueViewSet):
             return Response(MovimentacaoEstoqueSerializer(mov).data, status=status.HTTP_201_CREATED)
         except (Produto.DoesNotExist, LocalEstoque.DoesNotExist) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError as e:
-            return Response({'error': 'Quantidade deve ser um número válido.'}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoteEstoqueViewSet(BaseEstoqueViewSet):
     queryset = LoteEstoque.objects.all()
