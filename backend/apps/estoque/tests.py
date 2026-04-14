@@ -129,3 +129,27 @@ class EstoqueAPITestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(LoteEstoque.objects.count(), 1)
+
+    def test_ajuste_positivo_estoque(self):
+        """Delta positivo deve aumentar o estoque atual do produto."""
+        MovimentacaoEstoque.objects.create(
+            empresa=self.empresa,
+            produto=self.produto,
+            tipo_movimentacao='AJUSTE',
+            quantidade=Decimal('10.000'),
+            observacoes='Ajuste de inventário positivo'
+        )
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.estoque_atual, Decimal('110.000'))
+
+    def test_ajuste_negativo_estoque(self):
+        """Delta negativo deve diminuir o estoque atual do produto."""
+        MovimentacaoEstoque.objects.create(
+            empresa=self.empresa,
+            produto=self.produto,
+            tipo_movimentacao='AJUSTE',
+            quantidade=Decimal('-20.000'),
+            observacoes='Ajuste de inventário negativo'
+        )
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.estoque_atual, Decimal('80.000'))
