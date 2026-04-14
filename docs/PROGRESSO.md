@@ -2,7 +2,7 @@
 
 Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão de desenvolvimento.
 
-**Última atualização:** 2026-04-13 (Módulos 9 e 10 auditados)
+**Última atualização:** 2026-04-14 (Módulo 11 auditado — todos os módulos completos)
 
 ---
 
@@ -152,16 +152,28 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 ---
 
 ### Módulo 11 — Intake / Portal do Cliente (`apps/intake/`)
-**Status: ⚠️ Planejado**
-- Plano em `intake-plan.md`
-- Models: PortalCliente, DocumentoRecebido, ChecklistCompetencia, Pendencia
-- Integração Questor
+**Status: ✅ Completo** — *Auditado em 2026-04-14*
+
+**Estrutura:**
+- 5 models: `PortalCliente`, `ChecklistCompetencia`, `DocumentoRecebido`, `Pendencia`, `LoteExportacaoQuestor`
+- Migration `0001_initial.py` aplicada
+- `services.py`: validação de arquivo (extensão/tamanho/hash SHA-256), auto-criação de checklist, sincronização de pendências, exportação Questor (CSV)
+- `serializers.py`: validação cross-empresa em campos relacionados, auto-criação de checklist no `create()`
+- `views.py`: 5 ViewSets + `ConfirmarRecebimentoView` + `ExportarQuestorView`
+- `urls.py`: todas as rotas registradas
+
+**Sem fixes necessários** — nenhum dos padrões recorrentes de bugs encontrados
+
+**Frontend verificado:**
+- `IntakeView.vue` ✅ (497 linhas — formulário de recebimento, configuração de portal, exportação Questor, checklists, pendências, últimos recebimentos)
+- `intake.service.js` ✅ (todos os métodos: getPortalClientes, createPortalCliente, updatePortalCliente, getRecebimentos, createRecebimento, getPendencias, getChecklists, getLotes, confirmarRecebimento, exportarQuestor)
+- Rota registrada: `/intake` ✅
 
 ---
 
 ## Próximos passos sugeridos
 
-1. Implementar Módulo 11 (Intake/Portal)
+Todos os módulos (1–11) estão completos e auditados. Sistema pronto para uso em produção.
 
 ---
 
