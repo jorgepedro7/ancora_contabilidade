@@ -134,8 +134,9 @@
         </p>
         <form @submit.prevent="confirmarPagamento" class="space-y-4">
           <div>
-            <label class="block text-sm text-gray-300 mb-1">Data de Pagamento *</label>
+            <label for="modal-data-pagamento" class="block text-sm text-gray-300 mb-1">Data de Pagamento *</label>
             <input
+              id="modal-data-pagamento"
               type="date"
               v-model="formPagamento.data_envio_pagamento"
               required
@@ -143,8 +144,9 @@
             />
           </div>
           <div>
-            <label class="block text-sm text-gray-300 mb-1">Link do Comprovante</label>
+            <label for="modal-link-comprovante" class="block text-sm text-gray-300 mb-1">Link do Comprovante</label>
             <input
+              id="modal-link-comprovante"
               type="url"
               v-model="formPagamento.link_documento"
               placeholder="https://..."
@@ -152,8 +154,9 @@
             />
           </div>
           <div>
-            <label class="block text-sm text-gray-300 mb-1">Observações</label>
+            <label for="modal-observacoes" class="block text-sm text-gray-300 mb-1">Observações</label>
             <textarea
+              id="modal-observacoes"
               v-model="formPagamento.observacoes"
               rows="2"
               class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white text-sm focus:outline-none focus:border-ancora-gold/60"
