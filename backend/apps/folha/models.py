@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from backend.apps.core.models import ModelBaseEmpresa
 from backend.apps.core.utils import validar_cpf, formatar_cpf
 from datetime import date, timedelta
@@ -197,7 +198,12 @@ class HoleriteFuncionario(ModelBaseEmpresa):
         from backend.apps.core.utils import calcular_inss, calcular_irrf, calcular_fgts
 
         # Salário base do contrato ativo
-        contrato_ativo = self.funcionario.contratos.filter(ativo=True, data_inicio__lte=self.folha_pagamento.competencia).order_by('-data_inicio').first()
+        contrato_ativo = self.funcionario.contratos.filter(
+            ativo=True,
+            data_inicio__lte=self.folha_pagamento.competencia
+        ).filter(
+            Q(data_fim__isnull=True) | Q(data_fim__gte=self.folha_pagamento.competencia)
+        ).order_by('-data_inicio').first()
         if not contrato_ativo:
             raise ValueError(f"Funcionário {self.funcionario.nome_completo} não possui contrato ativo para a competência {self.folha_pagamento.competencia.strftime('%m/%Y')}.")
         
