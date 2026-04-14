@@ -102,7 +102,7 @@
                     :class="badgeClass(ob.status)"
                     class="px-2 py-0.5 text-xs rounded-full text-white"
                   >
-                    {{ ob.status }}
+                    {{ ob.status_display ?? ob.status }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-center">
@@ -329,7 +329,16 @@ async function confirmarPagamento() {
 async function fetchObrigacoes() {
   loading.value = true
   try {
-    const data = await obrigacoesService.getObrigacoes()
+    const hoje = new Date()
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 3, 1)
+      .toISOString().split('T')[0]
+    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 4, 0)
+      .toISOString().split('T')[0]
+    const data = await obrigacoesService.getObrigacoes({
+      data_vencimento__gte: inicio,
+      data_vencimento__lte: fim,
+      page_size: 200,
+    })
     obrigacoes.value = data.results ?? data
   } catch {
     uiStore.showNotification('Erro ao carregar guias.', 'error')
