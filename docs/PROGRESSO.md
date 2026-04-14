@@ -2,7 +2,7 @@
 
 Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão de desenvolvimento.
 
-**Última atualização:** 2026-04-13
+**Última atualização:** 2026-04-13 (Módulo 8 auditado)
 
 ---
 
@@ -99,9 +99,19 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 ---
 
 ### Módulo 8 — Contábil (`apps/contabil/`)
-**Status: ❌ Não verificado**
-- LancamentoContabil, BalancoPatrimonial, DRE
-- SPED: EFD ICMS-IPI, ECD
+**Status: ✅ Completo** — *Auditado e corrigido em 2026-04-13*
+
+**Fixes aplicados:**
+- `BalancoPatrimonialView`: `models.Q` não estava importado → `NameError` em runtime. Corrigido adicionando `Q` ao import e substituindo todas as 6 ocorrências de `models.Q(...)` por `Q(...)`
+
+**Frontend verificado:**
+- `LancamentoContabilListView.vue` ✅ (241 linhas, real)
+- `DREView.vue` ✅ (filtro por período, formatação BRL)
+- `BalancoPatrimonialView.vue` ✅ (filtro por data base)
+- `contabil.service.js` ✅ (todos os métodos presentes)
+- Rotas registradas: `/contabil/lancamentos`, `/contabil/dre`, `/contabil/balanco` ✅
+
+**Commits:** `fix(contabil): importa Q e corrige models.Q — NameError em BalancoPatrimonialView`
 
 ---
 
@@ -143,3 +153,4 @@ Documento de rastreamento do estado de cada módulo. Atualizado a cada sessão d
 | Bypass `is_superuser` em `get_queryset` | Folha | Remover bypass, filtrar sempre por `empresa_ativa` |
 | Signal com `pass` (não implementado) | Estoque | Implementar lógica de delta |
 | Método ausente no service frontend | Folha | Verificar métodos usados nas views x definidos no service |
+| `models.Q` usado sem import de `models` | Contábil | Adicionar `Q` ao import e substituir `models.Q(...)` por `Q(...)` |
