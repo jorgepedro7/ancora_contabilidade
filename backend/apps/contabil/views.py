@@ -7,7 +7,7 @@ from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 from .models import LancamentoContabil, PartidaLancamento
 from .serializers import LancamentoContabilSerializer, PartidaLancamentoSerializer
 from backend.apps.financeiro.models import PlanoContas
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from datetime import date
 
 class BaseContabilViewSet(viewsets.ModelViewSet):
@@ -111,8 +111,8 @@ class BalancoPatrimonialView(generics.GenericAPIView):
             lancamento__data_lancamento__lte=data_base,
             conta_contabil__in=contas_ativo
         ).aggregate(
-            sum_debitos=Sum('valor', filter=models.Q(tipo_partida='D')),
-            sum_creditos=Sum('valor', filter=models.Q(tipo_partida='C'))
+            sum_debitos=Sum('valor', filter=Q(tipo_partida='D')),
+            sum_creditos=Sum('valor', filter=Q(tipo_partida='C'))
         )
         valor_ativo = (total_ativo['sum_debitos'] or 0) - (total_ativo['sum_creditos'] or 0)
 
@@ -123,8 +123,8 @@ class BalancoPatrimonialView(generics.GenericAPIView):
             lancamento__data_lancamento__lte=data_base,
             conta_contabil__in=contas_passivo
         ).aggregate(
-            sum_debitos=Sum('valor', filter=models.Q(tipo_partida='D')),
-            sum_creditos=Sum('valor', filter=models.Q(tipo_partida='C'))
+            sum_debitos=Sum('valor', filter=Q(tipo_partida='D')),
+            sum_creditos=Sum('valor', filter=Q(tipo_partida='C'))
         )
         valor_passivo = (total_passivo['sum_creditos'] or 0) - (total_passivo['sum_debitos'] or 0)
 
@@ -135,8 +135,8 @@ class BalancoPatrimonialView(generics.GenericAPIView):
             lancamento__data_lancamento__lte=data_base,
             conta_contabil__in=contas_patrimonio_liquido
         ).aggregate(
-            sum_debitos=Sum('valor', filter=models.Q(tipo_partida='D')),
-            sum_creditos=Sum('valor', filter=models.Q(tipo_partida='C'))
+            sum_debitos=Sum('valor', filter=Q(tipo_partida='D')),
+            sum_creditos=Sum('valor', filter=Q(tipo_partida='C'))
         )
         valor_patrimonio_liquido = (total_patrimonio_liquido['sum_creditos'] or 0) - (total_patrimonio_liquido['sum_debitos'] or 0)
 
