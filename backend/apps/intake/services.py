@@ -13,6 +13,33 @@ from .models import ChecklistCompetencia, DocumentoRecebido, LoteExportacaoQuest
 ALLOWED_EXTENSIONS = {'.pdf', '.xml', '.csv', '.zip', '.jpg', '.jpeg', '.png'}
 
 
+def get_allowed_extensions():
+    """Extensões permitidas para upload pelo cliente no MVP."""
+    return ['.pdf', '.xml', '.csv', '.zip', '.jpg', '.jpeg', '.png']
+
+
+def validate_file_extension(filename):
+    """Retorna (is_valid, error_message)."""
+    _, ext = os.path.splitext(filename or '')
+    ext = ext.lower()
+
+    allowed = get_allowed_extensions()
+    if ext not in allowed:
+        return False, f"Extensão {ext or '(sem extensão)'} não permitida. Permitidas: {', '.join(allowed)}"
+    return True, None
+
+
+def validate_file_size(file_obj, max_size_mb=10):
+    """Retorna (is_valid, error_message)."""
+    if not file_obj:
+        return False, 'Arquivo não fornecido'
+
+    max_bytes = max_size_mb * 1024 * 1024
+    if getattr(file_obj, 'size', 0) > max_bytes:
+        return False, f'Arquivo excede {max_size_mb}MB'
+    return True, None
+
+
 def parse_competencia(value):
     if isinstance(value, date):
         return value.replace(day=1)
