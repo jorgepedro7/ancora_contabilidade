@@ -123,6 +123,42 @@ class DocumentoRecebidoSerializer(serializers.ModelSerializer):
         return documento
 
 
+class ClientePortalConfigSerializer(serializers.ModelSerializer):
+    """Exposição de configuração do portal para o cliente."""
+
+    tipos_documento_permitidos = serializers.SerializerMethodField()
+    extensoes_permitidas = serializers.SerializerMethodField()
+    tamanho_maximo_mb = serializers.SerializerMethodField()
+    nome = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PortalCliente
+        fields = [
+            'slug', 'nome',
+            'tipos_documento_permitidos', 'extensoes_permitidas', 'tamanho_maximo_mb',
+        ]
+
+    def get_nome(self, obj):
+        # PortalCliente não tem 'nome' próprio; usa o nome_fantasia da empresa.
+        return getattr(obj.empresa, 'nome_fantasia', '') or getattr(obj.empresa, 'razao_social', '')
+
+    def get_tipos_documento_permitidos(self, obj):
+        return [
+            {'value': 'FINANCEIRO', 'label': 'Documentos Financeiros'},
+            {'value': 'GERAL', 'label': 'Documentos Gerais'},
+            {'value': 'FISCAL', 'label': 'Documentos Fiscais'},
+            {'value': 'FOLHA', 'label': 'Documentos de Folha'},
+            {'value': 'CONTRATUAL', 'label': 'Documentos Contratuais'},
+        ]
+
+    def get_extensoes_permitidas(self, obj):
+        from backend.apps.intake.services import get_allowed_extensions
+        return get_allowed_extensions()
+
+    def get_tamanho_maximo_mb(self, obj):
+        return 10
+
+
 class ClienteRecebimentoSerializer(serializers.ModelSerializer):
     """Serializer do portal cliente para envio/listagem de documentos."""
 
