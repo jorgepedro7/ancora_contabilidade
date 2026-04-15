@@ -24,7 +24,24 @@ export const useAuthStore = defineStore('auth', () => {
       const empresaStore = useEmpresaStore()
       await empresaStore.syncActiveEmpresa(true)
 
-      router.push('/') // Redireciona para o dashboard após login
+      // CLIENTE vai direto para o portal, sem passar pelo sistema interno
+      if (response.user?.perfil_empresa === 'CLIENTE') {
+        try {
+          const IntakeService = (await import('@/services/intake.service')).default
+          const data = await IntakeService.listClientePortais()
+          const portais = data.results || data || []
+          const slug = portais[0]?.slug
+          if (slug) {
+            router.push(`/area_cliente/${slug}`)
+          } else {
+            router.push('/area_cliente/portal')
+          }
+        } catch {
+          router.push('/area_cliente/portal')
+        }
+      } else {
+        router.push('/')
+      }
     } catch (error) {
       console.error('Login failed:', error)
       throw error // Lança o erro para ser tratado no componente

@@ -44,7 +44,7 @@ const router = createRouter({
       path: '/area_cliente/:slug',
       name: 'area-cliente',
       component: () => import('../views/intake/ClientPortalView.vue'),
-      meta: { requiresAuth: true, requiresCliente: true }
+      meta: { requiresAuth: true, requiresCliente: true, clientPortal: true }
     },
     {
       path: '/cadastros/clientes',
@@ -167,29 +167,42 @@ router.beforeEach((to, from, next) => {
     return next('/login')
   }
 
-  if (to.name === 'login' && isAuthenticated) {
+  if (!isAuthenticated) {
+    return next()
+  }
+
+  // Lê perfil do localStorage (salvo no login)
+  let perfil = null
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    perfil = user.perfil_empresa || null
+  } catch (_) {}
+
+  const isCliente = perfil === 'CLIENTE'
+
+  // CLIENTE tentando acessar /login ou qualquer rota sem clientPortal → portal
+  if (isCliente && to.name === 'login') {
+    return next('/area_cliente/portal')
+  }
+
+  // CLIENTE tentando rota de backoffice → portal
+  if (isCliente && to.meta.requiresBackoffice) {
+    return next('/area_cliente/portal')
+  }
+
+  // CLIENTE na raiz (dashboard) → portal
+  if (isCliente && to.name === 'dashboard') {
+    return next('/area_cliente/portal')
+  }
+
+  // Backoffice no /login → dashboard
+  if (!isCliente && to.name === 'login') {
     return next('/')
   }
 
-  if (isAuthenticated && (to.meta.requiresBackoffice || to.meta.requiresCliente)) {
-    // Lê o perfil do usuário armazenado no localStorage (salvo no login)
-    let perfil = null
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      perfil = user.perfil_empresa || user.perfil || null
-    } catch (_) {}
-
-    const isCliente = perfil === 'CLIENTE'
-
-    // Rota de backoffice bloqueada para CLIENTE
-    if (to.meta.requiresBackoffice && isCliente) {
-      return next('/area_cliente/portal')
-    }
-
-    // Rota de cliente bloqueada para backoffice (redireciona para dashboard interno)
-    if (to.meta.requiresCliente && !isCliente && perfil !== null) {
-      return next('/intake')
-    }
+  // Backoffice tentando rota de cliente → intake
+  if (!isCliente && perfil !== null && to.meta.requiresCliente) {
+    return next('/intake')
   }
 
   next()
