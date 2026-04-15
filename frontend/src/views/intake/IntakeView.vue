@@ -118,6 +118,24 @@
                   </option>
                 </select>
               </div>
+
+              <div v-if="form.tipo_documento === 'FISCAL'">
+                <label class="block text-sm text-gray-300 mb-1">Nota Fiscal (opcional)</label>
+                <input type="text" placeholder="Número ou chave NF" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white text-sm" />
+                <p class="text-xs text-gray-500 mt-1">Vinculação manual pode ser feita depois se necessário</p>
+              </div>
+
+              <div v-if="form.tipo_documento === 'FOLHA'">
+                <label class="block text-sm text-gray-300 mb-1">Funcionário/Contrato (opcional)</label>
+                <input type="text" placeholder="Nome do funcionário ou contrato" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white text-sm" />
+                <p class="text-xs text-gray-500 mt-1">Vinculação manual pode ser feita depois se necessário</p>
+              </div>
+
+              <div v-if="form.tipo_documento === 'CONTRATUAL'">
+                <label class="block text-sm text-gray-300 mb-1">Contrato (opcional)</label>
+                <input type="text" placeholder="Número ou descrição do contrato" class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white text-sm" />
+                <p class="text-xs text-gray-500 mt-1">Vinculação manual pode ser feita depois se necessário</p>
+              </div>
             </div>
 
             <div>
@@ -132,7 +150,7 @@
 
             <div class="flex items-center justify-between gap-4">
               <p class="text-xs text-gray-500">
-                Documentos fiscais sem nota vinculada e documentos de folha sem funcionário ou contrato geram pendência automática.
+                Documentos sem vinculação interna (nota fiscal, funcionário, contrato) entrarão em triagem para vinculação manual.
               </p>
               <button type="submit" :disabled="submitting" class="px-5 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80 disabled:opacity-50">
                 {{ submitting ? 'Registrando...' : 'Registrar documento' }}
@@ -213,12 +231,19 @@
               <div>
                 <p class="text-white font-bold">{{ recebimento.titulo }}</p>
                 <p class="text-sm text-gray-400">{{ recebimento.tipo_documento }} • {{ formatCompetencia(recebimento.competencia) }}</p>
+                <p class="text-xs text-gray-500 mt-1">
+                  <span v-if="recebimento.origem_upload" class="inline-block bg-ancora-navy/40 px-2 py-0.5 rounded mr-2">{{ recebimento.origem_upload }}</span>
+                  <span v-if="recebimento.enviado_por" class="text-gray-400">Enviado por: {{ recebimento.enviado_por }}</span>
+                </p>
                 <p v-if="recebimento.portal_cliente_slug" class="text-xs text-gray-500 mt-1">Área externa: {{ recebimento.portal_cliente_slug }}</p>
                 <p class="text-xs text-gray-500 mt-1">{{ recebimento.arquivo_nome }}</p>
               </div>
-              <span class="text-xs font-bold px-2 py-1 rounded" :class="badgeClass(recebimento.status)">
-                {{ recebimento.status }}
-              </span>
+              <div class="text-right">
+                <span class="text-xs font-bold px-2 py-1 rounded block" :class="badgeClass(recebimento.status)">
+                  {{ recebimento.status }}
+                </span>
+                <p class="text-xs text-gray-500 mt-2">{{ getStatusMessage(recebimento.status) }}</p>
+              </div>
             </div>
             <div
               v-if="recebimento.status === 'REPROVADO' && authStore.user?.perfil_empresa !== 'CLIENTE'"
@@ -410,7 +435,12 @@ async function submitRecebimento() {
     }
 
     const response = await IntakeService.createRecebimento(payload)
-    uiStore.showNotification(`Documento registrado com status ${response.status}.`, response.status === 'VALIDADO' ? 'success' : 'warning')
+    const message = response.status === 'NOVO'
+      ? 'Documento enviado como NOVO. Aguardando triagem da equipe.'
+      : response.status === 'VALIDADO'
+      ? 'Documento validado com sucesso!'
+      : 'Documento registrado com restrições. Verifique com a equipe.'
+    uiStore.showNotification(message, response.status === 'VALIDADO' ? 'success' : response.status === 'NOVO' ? 'warning' : 'error')
 
     form.value = {
       titulo: '',
@@ -482,6 +512,19 @@ function formatCompetencia(value) {
 function formatCnpj(cnpj) {
   if (!cnpj) return ''
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+}
+
+function getStatusMessage(status) {
+  if (status === 'NOVO') {
+    return 'Aguardando triagem ou vinculação'
+  }
+  if (status === 'VALIDADO') {
+    return 'Documento validado'
+  }
+  if (status === 'REPROVADO') {
+    return 'Documento reprovado'
+  }
+  return 'Status desconhecido'
 }
 
 function badgeClass(status) {
