@@ -178,9 +178,11 @@ router.beforeEach((to, from, next) => {
     perfil = user.perfil_empresa || null
   } catch (_) {}
 
+  // Qualquer perfil que não seja CLIENTE é considerado backoffice
   const isCliente = perfil === 'CLIENTE'
+  const isBackoffice = perfil !== null && perfil !== 'CLIENTE'
 
-  // CLIENTE tentando acessar /login ou qualquer rota sem clientPortal → portal
+  // CLIENTE tentando /login → portal
   if (isCliente && to.name === 'login') {
     return next('/area_cliente/portal')
   }
@@ -196,12 +198,12 @@ router.beforeEach((to, from, next) => {
   }
 
   // Backoffice no /login → dashboard
-  if (!isCliente && to.name === 'login') {
+  if (isBackoffice && to.name === 'login') {
     return next('/')
   }
 
   // Backoffice tentando rota de cliente → intake
-  if (!isCliente && perfil !== null && to.meta.requiresCliente) {
+  if (isBackoffice && to.meta.requiresCliente) {
     return next('/intake')
   }
 

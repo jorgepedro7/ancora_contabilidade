@@ -71,11 +71,11 @@ class IsIntakeClientCompany(permissions.BasePermission):
             return False
         if not getattr(request.user, 'empresa_ativa', None):
             return False
-        perfil = getattr(request.user, 'perfil', None)
-        if perfil == 'CLIENTE':
-            return True
-        # Backoffice access for debug/testing
-        return usuario_tem_perfil_backoffice(request.user)
+        perfil_obj = obter_perfil_empresa(request.user)
+        if perfil_obj is None:
+            return getattr(request.user, 'is_superuser', False)
+        # Permite CLIENTE e qualquer perfil de backoffice (debug/teste)
+        return True
 
 
 class IsBackofficeCompany(permissions.BasePermission):
