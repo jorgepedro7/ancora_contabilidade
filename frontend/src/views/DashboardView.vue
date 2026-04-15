@@ -37,11 +37,18 @@
           >
             Configurar empresa ativa
           </router-link>
-          <p
-            v-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa === 'CLIENTE'"
-            class="max-w-xs text-sm text-gray-400"
+          <router-link
+            v-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa === 'CLIENTE' && portalSlug"
+            :to="`/area_cliente/${portalSlug}`"
+            class="px-4 py-2 bg-ancora-gold text-ancora-black rounded-md font-bold hover:bg-ancora-gold/80"
           >
-            A área do cliente deve ser publicada em um portal separado, fora do backoffice.
+            Acessar Portal de Envios
+          </router-link>
+          <p
+            v-else-if="empresaStore.activeEmpresa && authStore.user.perfil_empresa === 'CLIENTE' && !portalSlug"
+            class="text-sm text-gray-400"
+          >
+            Nenhum portal de envios configurado. Contate o escritório.
           </p>
         </div>
       </div>
@@ -131,6 +138,7 @@ import { onMounted, ref, watch } from 'vue'
 import EmpresasService from '@/services/empresas.service'
 import FinanceiroService from '@/services/financeiro.service'
 import FiscalService from '@/services/fiscal.service'
+import IntakeService from '@/services/intake.service'
 import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useUiStore } from '@/stores/ui'
@@ -141,6 +149,7 @@ const uiStore = useUiStore()
 
 const switchingCompany = ref(false)
 const availableEmpresas = ref([])
+const portalSlug = ref(null)
 const error = ref(null)
 const dashboardData = ref({
   nfe_emitidas_mes: 0,
@@ -167,10 +176,22 @@ watch(() => empresaStore.activeEmpresa?.id, async (empresaId) => {
 async function initializeDashboard() {
   if (authStore.user?.perfil_empresa !== 'CLIENTE') {
     await loadEmpresas()
+  } else {
+    await loadPortalSlug()
   }
 
   if (empresaStore.activeEmpresa) {
     await fetchDashboardData()
+  }
+}
+
+async function loadPortalSlug() {
+  try {
+    const data = await IntakeService.listClientePortais()
+    const portais = data.results || data || []
+    portalSlug.value = portais[0]?.slug || null
+  } catch {
+    portalSlug.value = null
   }
 }
 

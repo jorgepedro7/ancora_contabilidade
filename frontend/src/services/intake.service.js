@@ -56,32 +56,28 @@ class IntakeService {
   }
 
   // === Cliente Portal (área do cliente) ===
-  // Busca configuração do portal pelo slug. Usa o endpoint de portal
-  // filtrado pelo slug público.
-  async getClientPortalConfig(slug) {
-    const response = await api.get('/intake/portal/', { params: { slug } })
-    const data = response.data
-    const portal = (data.results || data || []).find((p) => p.slug === slug) || null
-    return {
-      portal,
-      tipos_aceitos: ['FISCAL', 'FOLHA', 'FINANCEIRO', 'CONTRATUAL', 'GERAL'],
-      extensoes_permitidas: [
-        '.pdf', '.xml', '.csv', '.txt', '.zip',
-        '.xls', '.xlsx', '.jpg', '.jpeg', '.png',
-      ],
-      tamanho_maximo_mb: 10,
-    }
+  // Usa endpoints dedicados /intake/cliente/* com permissão IsIntakeClientCompany
+
+  // Lista portais disponíveis para o cliente logado (empresa ativa).
+  async listClientePortais() {
+    const response = await api.get('/intake/cliente/portal/')
+    return response.data
   }
 
-  // Lista documentos do cliente logado (backend filtra por empresa ativa).
+  async getClientPortalConfig(slug) {
+    const response = await api.get(`/intake/cliente/portal/${slug}/`)
+    return response.data
+  }
+
+  // Lista documentos enviados pelo cliente logado (backend filtra por empresa e usuário).
   async listMyDocuments(params = {}) {
-    const response = await api.get('/intake/recebimentos/', { params })
+    const response = await api.get('/intake/cliente/recebimentos/', { params })
     return response.data
   }
 
   // Upload de documento pelo cliente. Aceita FormData pronto.
   async uploadDocument(formData) {
-    const response = await api.post('/intake/recebimentos/', formData, {
+    const response = await api.post('/intake/cliente/recebimentos/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return response.data

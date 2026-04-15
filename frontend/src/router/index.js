@@ -38,13 +38,13 @@ const router = createRouter({
       path: '/intake',
       name: 'intake',
       component: () => import('../views/intake/IntakeView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, requiresBackoffice: true }
     },
     {
       path: '/area_cliente/:slug',
       name: 'area-cliente',
       component: () => import('../views/intake/ClientPortalView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, requiresCliente: true }
     },
     {
       path: '/cadastros/clientes',
@@ -159,16 +159,40 @@ const router = createRouter({
   ]
 })
 
-// Navigation Guard para autenticação
+// Navigation Guard para autenticação e perfil
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('access_token') // Ou use a store Pinia de autenticação
+  const isAuthenticated = localStorage.getItem('access_token')
+
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if (to.name === 'login' && isAuthenticated) {
-    next('/')
-  } else {
-    next()
+    return next('/login')
   }
+
+  if (to.name === 'login' && isAuthenticated) {
+    return next('/')
+  }
+
+  if (isAuthenticated && (to.meta.requiresBackoffice || to.meta.requiresCliente)) {
+    // Lê o perfil do usuário armazenado no localStorage (salvo no login)
+    let perfil = null
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      perfil = user.perfil_empresa || user.perfil || null
+    } catch (_) {}
+
+    const isCliente = perfil === 'CLIENTE'
+
+    // Rota de backoffice bloqueada para CLIENTE
+    if (to.meta.requiresBackoffice && isCliente) {
+      return next('/area_cliente/portal')
+    }
+
+    // Rota de cliente bloqueada para backoffice (redireciona para dashboard interno)
+    if (to.meta.requiresCliente && !isCliente && perfil !== null) {
+      return next('/intake')
+    }
+  }
+
+  next()
 })
 
 export default router
