@@ -41,6 +41,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/area_cliente/:slug',
+      name: 'area-cliente',
+      component: () => import('../views/intake/ClientPortalView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/cadastros/clientes',
       name: 'clientes-list',
       component: () => import('../views/cadastros/ClienteListView.vue'),
