@@ -261,3 +261,32 @@ class IsIntakeClientCompanyPermissionTest(APITestCase):
 
         request.user = AnonymousUser()
         self.assertFalse(IsIntakeClientCompany().has_permission(request, None))
+
+
+class FileValidationTest(APITestCase):
+    def test_valid_and_invalid_extensions(self):
+        from backend.apps.intake.services import validate_file_extension
+
+        for ext in ['.pdf', '.xml', '.csv', '.zip', '.jpg', '.jpeg', '.png']:
+            is_valid, err = validate_file_extension(f'doc{ext}')
+            self.assertTrue(is_valid, f'extension {ext} should be allowed')
+            self.assertIsNone(err)
+
+        for ext in ['.exe', '.txt', '.html', '.sh']:
+            is_valid, err = validate_file_extension(f'doc{ext}')
+            self.assertFalse(is_valid, f'extension {ext} must be blocked')
+            self.assertIsNotNone(err)
+
+    def test_file_size_validation(self):
+        from backend.apps.intake.services import validate_file_size
+
+        class FakeFile:
+            def __init__(self, size):
+                self.size = size
+
+        is_valid, _ = validate_file_size(FakeFile(1024), max_size_mb=10)
+        self.assertTrue(is_valid)
+
+        is_valid, err = validate_file_size(FakeFile(11 * 1024 * 1024), max_size_mb=10)
+        self.assertFalse(is_valid)
+        self.assertIn('10MB', err)
