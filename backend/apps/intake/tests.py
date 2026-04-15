@@ -263,6 +263,112 @@ class IsIntakeClientCompanyPermissionTest(APITestCase):
         self.assertFalse(IsIntakeClientCompany().has_permission(request, None))
 
 
+class ClientePermissionIsolationTest(APITestCase):
+    def test_cliente_permission_isolation(self):
+        """Verify CLIENTE is blocked from backoffice endpoints but can access cliente endpoints."""
+        from rest_framework.test import APIClient
+
+        User = get_user_model()
+        client = APIClient()
+
+        empresa = Empresa.objects.create(
+            razao_social='Isolation LTDA',
+            nome_fantasia='Isolation',
+            cnpj='88888888000111',
+            regime_tributario='SN',
+            cnae_principal='1234567',
+            cep='01001000',
+            logradouro='Rua Iso',
+            numero='1',
+            bairro='Centro',
+            municipio='São Paulo',
+            uf='SP',
+        )
+        portal = PortalCliente.objects.create(empresa=empresa, slug='test-iso')
+        arquivo = SimpleUploadedFile('doc.pdf', b'x', content_type='application/pdf')
+        DocumentoRecebido.objects.create(
+            portal_cliente=portal,
+            empresa=empresa,
+            titulo='Test',
+            tipo_documento='FINANCEIRO',
+            tipo_entrega='UPLOAD',
+            competencia='2026-04-01',
+            arquivo=arquivo,
+        )
+
+        cliente_user = User.objects.create_user(
+            email='cliente_iso@example.com',
+            nome='Cliente Iso',
+            password='x',
+            perfil='CLIENTE',
+        )
+        cliente_user.empresa_ativa = empresa
+        cliente_user.save(update_fields=['empresa_ativa'])
+        PerfilPermissao.objects.create(usuario=cliente_user, empresa=empresa, perfil='CLIENTE')
+
+        client.force_authenticate(user=cliente_user)
+
+        # Should be blocked from backoffice endpoints
+        self.assertEqual(client.get('/api/intake/recebimentos/').status_code, 403)
+        self.assertEqual(client.get('/api/intake/checklists/').status_code, 403)
+        self.assertEqual(client.get('/api/intake/pendencias/').status_code, 403)
+
+        # Should be allowed on cliente endpoints
+        self.assertEqual(client.get('/api/intake/cliente/recebimentos/').status_code, 200)
+        self.assertEqual(client.get('/api/intake/cliente/portal/test-iso/').status_code, 200)
+
+    def test_cliente_upload_creates_novo(self):
+        """Verify client upload creates document with status=NOVO."""
+        from rest_framework.test import APIClient
+
+        User = get_user_model()
+        client = APIClient()
+
+        empresa = Empresa.objects.create(
+            razao_social='Upload LTDA',
+            nome_fantasia='Upload',
+            cnpj='77777777000122',
+            regime_tributario='SN',
+            cnae_principal='1234567',
+            cep='01001000',
+            logradouro='Rua Up',
+            numero='1',
+            bairro='Centro',
+            municipio='São Paulo',
+            uf='SP',
+        )
+        PortalCliente.objects.create(empresa=empresa, slug='test-upload')
+
+        cliente_user = User.objects.create_user(
+            email='cliente_up@example.com',
+            nome='Cliente Up',
+            password='x',
+            perfil='CLIENTE',
+        )
+        cliente_user.empresa_ativa = empresa
+        cliente_user.save(update_fields=['empresa_ativa'])
+        PerfilPermissao.objects.create(usuario=cliente_user, empresa=empresa, perfil='CLIENTE')
+
+        client.force_authenticate(user=cliente_user)
+
+        arquivo = SimpleUploadedFile('doc.pdf', b'fake pdf', content_type='application/pdf')
+
+        response = client.post('/api/intake/cliente/recebimentos/', {
+            'titulo': 'Test Doc',
+            'tipo_documento': 'FINANCEIRO',
+            'competencia': '2026-04-01',
+            'arquivo': arquivo,
+        }, format='multipart')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['status'], 'NOVO')
+        self.assertEqual(response.data['titulo'], 'Test Doc')
+
+        doc = DocumentoRecebido.objects.get(id=response.data['id'])
+        self.assertEqual(doc.origem_upload, 'CLIENTE')
+        self.assertEqual(doc.enviado_por, cliente_user)
+
+
 class FileValidationTest(APITestCase):
     def test_valid_and_invalid_extensions(self):
         from backend.apps.intake.services import validate_file_extension
