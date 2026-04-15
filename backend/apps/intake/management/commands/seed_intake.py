@@ -1,57 +1,118 @@
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-from backend.apps.core.utils import obter_empresa_principal
-from backend.apps.intake.models import ChecklistCompetencia, DocumentoRecebido, PortalCliente
-from backend.apps.intake.services import (
-    calcular_hash_arquivo,
-    obter_ou_criar_checklist,
-    parse_competencia,
-    sincronizar_pendencias_documento,
-    validar_documento,
-)
+from backend.apps.core.models import PerfilPermissao
+from backend.apps.empresas.models import Empresa
+from backend.apps.intake.models import DocumentoRecebido, PortalCliente
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Cria dados básicos de demonstração para o módulo intake.'
+    help = 'Popula dados iniciais para o módulo intake (idempotente).'
 
     def handle(self, *args, **options):
-        empresa = obter_empresa_principal()
-        if not empresa:
-            self.stdout.write(self.style.WARNING('Nenhuma empresa ativa encontrada.'))
-            return
-
-        portal, _ = PortalCliente.objects.get_or_create(
-            empresa=empresa,
-            slug='portal-ancora',
-            defaults={'email_responsavel': 'financeiro@ancora.local'},
-        )
-
-        competencia = parse_competencia('2026-03')
-        checklist = obter_ou_criar_checklist(empresa, competencia, 'FINANCEIRO')
-        documento, created = DocumentoRecebido.objects.get_or_create(
-            empresa=empresa,
-            titulo='Extrato Bancário Março',
-            tipo_documento='FINANCEIRO',
-            tipo_entrega='UPLOAD',
-            competencia=competencia,
+        # Empresa de teste
+        empresa, _ = Empresa.objects.get_or_create(
+            cnpj='00000000000000',
             defaults={
-                'portal_cliente': portal,
-                'checklist': checklist,
-                'arquivo': ContentFile(b'extrato-marco', name='extrato_marco.pdf'),
+                'razao_social': 'Âncora Contabilidade Teste LTDA',
+                'nome_fantasia': 'Âncora Contabilidade Teste',
+                'regime_tributario': 'SN',
+                'cnae_principal': '1234567',
+                'cep': '01001000',
+                'logradouro': 'Praça da Sé',
+                'numero': '100',
+                'bairro': 'Centro',
+                'municipio': 'São Paulo',
+                'uf': 'SP',
             },
         )
+        self.stdout.write(f'Empresa: {empresa.nome_fantasia}')
 
-        if created or not documento.hash_arquivo:
-            documento.hash_arquivo = calcular_hash_arquivo(documento.arquivo)
-            status, logs = validar_documento({
-                'arquivo': documento.arquivo,
-                'tipo_documento': documento.tipo_documento,
-                'competencia': documento.competencia,
-            })
-            documento.status = status
-            documento.log_validacao = logs
-            documento.save(update_fields=['hash_arquivo', 'status', 'log_validacao', 'atualizado_em'])
-            sincronizar_pendencias_documento(documento)
+        # Usuário backoffice
+        backoffice, created = User.objects.get_or_create(
+            email='backoffice@seed.test',
+            defaults={
+                'nome': 'Backoffice Seed',
+                'perfil': 'BACKOFFICE',
+                'empresa_ativa': empresa,
+                'is_active': True,
+            },
+        )
+        if created:
+            backoffice.set_password('senha123')
+            backoffice.save()
+        PerfilPermissao.objects.get_or_create(usuario=backoffice, empresa=empresa, defaults={'perfil': 'ADMIN'})
+        self.stdout.write(f'Backoffice: {backoffice.email}')
 
-        self.stdout.write(self.style.SUCCESS('Seed do intake concluído.'))
+        # Usuário cliente
+        cliente, created = User.objects.get_or_create(
+            email='cliente@seed.test',
+            defaults={
+                'nome': 'Cliente Seed',
+                'perfil': 'CLIENTE',
+                'empresa_ativa': empresa,
+                'is_active': True,
+            },
+        )
+        if created:
+            cliente.set_password('senha123')
+            cliente.save()
+        PerfilPermissao.objects.get_or_create(usuario=cliente, empresa=empresa, defaults={'perfil': 'CLIENTE'})
+        self.stdout.write(f'Cliente: {cliente.email}')
+
+        # Portal
+        portal, _ = PortalCliente.objects.get_or_create(
+            slug='portal-ancora',
+            defaults={
+                'empresa': empresa,
+                'email_responsavel': 'contato@ancora.local',
+                'telefone_responsavel': '(11) 3000-0000',
+                'recebe_alertas': True,
+            },
+        )
+        self.stdout.write(f'Portal: {portal.slug}')
+
+        # Documento validado (backoffice)
+        DocumentoRecebido.objects.get_or_create(
+            portal_cliente=portal,
+            empresa=empresa,
+            titulo='Documentação de Teste - Validado',
+            tipo_documento='FINANCEIRO',
+            competencia='2026-04-01',
+            defaults={
+                'tipo_entrega': 'UPLOAD',
+                'arquivo': ContentFile(b'seed-backoffice', name='seed_backoffice.pdf'),
+                'status': 'VALIDADO',
+                'origem_upload': 'BACKOFFICE',
+                'enviado_por': backoffice,
+                'validado_por': backoffice,
+                'validado_em': timezone.now(),
+                'observacoes': 'Criado pelo seed',
+            },
+        )
+        self.stdout.write('Doc validado: criado')
+
+        # Documento novo do cliente
+        DocumentoRecebido.objects.get_or_create(
+            portal_cliente=portal,
+            empresa=empresa,
+            titulo='Documentação de Cliente - Em Triagem',
+            tipo_documento='FISCAL',
+            competencia='2026-04-01',
+            defaults={
+                'tipo_entrega': 'UPLOAD',
+                'arquivo': ContentFile(b'seed-cliente', name='seed_cliente.pdf'),
+                'status': 'NOVO',
+                'origem_upload': 'CLIENTE',
+                'enviado_por': cliente,
+                'referencia_cliente': 'NF-2026-001',
+                'observacoes': 'Enviado por cliente para teste',
+            },
+        )
+        self.stdout.write('Doc novo (cliente): criado')
+
+        self.stdout.write(self.style.SUCCESS('Seed completo!'))
