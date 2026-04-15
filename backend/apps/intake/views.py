@@ -5,12 +5,14 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, Http404
 
-from backend.apps.core.permissions import IsBackofficeCompany
+from backend.apps.core.permissions import IsBackofficeCompany, IsIntakeClientCompany
 from backend.apps.core.utils import obter_empresa_ativa_ou_erro
 
 from .models import ChecklistCompetencia, DocumentoRecebido, LoteExportacaoQuestor, Pendencia, PortalCliente
 from .serializers import (
     ChecklistCompetenciaSerializer,
+    ClientePortalConfigSerializer,
+    ClienteRecebimentoSerializer,
     DocumentoRecebidoSerializer,
     LoteExportacaoQuestorSerializer,
     PendenciaSerializer,
@@ -93,6 +95,43 @@ class LoteExportacaoQuestorViewSet(viewsets.ReadOnlyModelViewSet):
             lote.arquivo_exportado.open('rb'),
             as_attachment=True,
             filename=lote.arquivo_exportado.name.split('/')[-1],
+        )
+
+
+class ClientePortalConfigViewSet(viewsets.ReadOnlyModelViewSet):
+    """GET /api/intake/cliente/portal/<slug>/ — configuração do portal."""
+    permission_classes = [IsIntakeClientCompany]
+    serializer_class = ClientePortalConfigSerializer
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
+        return PortalCliente.objects.filter(empresa=empresa, ativo=True)
+
+
+class ClienteRecebimentoViewSet(viewsets.ModelViewSet):
+    """GET/POST /api/intake/cliente/recebimentos/ — envio/listagem pelo cliente."""
+    permission_classes = [IsIntakeClientCompany]
+    serializer_class = ClienteRecebimentoSerializer
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
+        return DocumentoRecebido.objects.filter(
+            empresa=empresa,
+            enviado_por=self.request.user,
+            ativo=True,
+        ).order_by('-criado_em')
+
+    def perform_create(self, serializer):
+        empresa = obter_empresa_ativa_ou_erro(self.request.user)
+        portal = PortalCliente.objects.filter(empresa=empresa, ativo=True).first()
+        serializer.save(
+            empresa=empresa,
+            enviado_por=self.request.user,
+            origem_upload='CLIENTE',
+            portal_cliente=portal,
+            status='NOVO',
         )
 
 
