@@ -37,7 +37,6 @@ class Command(BaseCommand):
             email='backoffice@seed.test',
             defaults={
                 'nome': 'Backoffice Seed',
-                'perfil': 'BACKOFFICE',
                 'empresa_ativa': empresa,
                 'is_active': True,
             },
@@ -53,7 +52,6 @@ class Command(BaseCommand):
             email='cliente@seed.test',
             defaults={
                 'nome': 'Cliente Seed',
-                'perfil': 'CLIENTE',
                 'empresa_ativa': empresa,
                 'is_active': True,
             },
