@@ -225,3 +225,39 @@ class IntakeAPITestCase(APITestCase):
         self.assertIsNone(documento.validado_por)
         self.assertIsNone(documento.validado_em)
         self.assertEqual(documento.origem_upload, 'CLIENTE')
+
+
+class IsIntakeClientCompanyPermissionTest(APITestCase):
+    def test_permission_grants_cliente_and_denies_anonymous(self):
+        from rest_framework.test import APIRequestFactory
+        from django.contrib.auth.models import AnonymousUser
+        from backend.apps.core.permissions import IsIntakeClientCompany
+
+        User = get_user_model()
+        factory = APIRequestFactory()
+        empresa = Empresa.objects.create(
+            razao_social='Perm Test LTDA',
+            nome_fantasia='Perm Test',
+            cnpj='99999999000100',
+            regime_tributario='SN',
+            cnae_principal='1234567',
+            cep='01001000',
+            logradouro='Rua Teste',
+            numero='1',
+            bairro='Centro',
+            municipio='São Paulo',
+            uf='SP',
+        )
+        cliente = User.objects.create_user(
+            email='cliente@example.com', nome='Cliente', password='x', perfil='CLIENTE',
+        )
+        cliente.empresa_ativa = empresa
+        cliente.save(update_fields=['empresa_ativa'])
+        PerfilPermissao.objects.create(usuario=cliente, empresa=empresa, perfil='CLIENTE')
+
+        request = factory.get('/')
+        request.user = cliente
+        self.assertTrue(IsIntakeClientCompany().has_permission(request, None))
+
+        request.user = AnonymousUser()
+        self.assertFalse(IsIntakeClientCompany().has_permission(request, None))

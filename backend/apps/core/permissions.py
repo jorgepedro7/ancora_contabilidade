@@ -59,6 +59,25 @@ class IsBackofficeUser(permissions.BasePermission):
         )
 
 
+class IsIntakeClientCompany(permissions.BasePermission):
+    """
+    Permite acesso ao portal cliente para:
+    - Usuários com perfil CLIENTE e empresa ativa
+    - Usuários de backoffice (para debug/teste)
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if not getattr(request.user, 'empresa_ativa', None):
+            return False
+        perfil = getattr(request.user, 'perfil', None)
+        if perfil == 'CLIENTE':
+            return True
+        # Backoffice access for debug/testing
+        return usuario_tem_perfil_backoffice(request.user)
+
+
 class IsBackofficeCompany(permissions.BasePermission):
     """
     Allows access only when the active company exists and the active profile is not CLIENTE.
