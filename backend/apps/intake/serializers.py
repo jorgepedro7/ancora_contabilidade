@@ -123,6 +123,50 @@ class DocumentoRecebidoSerializer(serializers.ModelSerializer):
         return documento
 
 
+class ClienteRecebimentoSerializer(serializers.ModelSerializer):
+    """Serializer do portal cliente para envio/listagem de documentos."""
+
+    arquivo_nome = serializers.SerializerMethodField()
+    portal_cliente_slug = serializers.CharField(source='portal_cliente.slug', read_only=True)
+    log_validacao = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DocumentoRecebido
+        fields = [
+            'id', 'titulo', 'tipo_documento', 'competencia', 'status',
+            'arquivo', 'arquivo_nome', 'portal_cliente_slug', 'criado_em',
+            'validado_em', 'observacoes', 'referencia_cliente', 'log_validacao',
+        ]
+        read_only_fields = [
+            'id', 'status', 'criado_em', 'validado_em',
+            'portal_cliente_slug', 'log_validacao', 'arquivo_nome',
+        ]
+
+    def get_arquivo_nome(self, obj):
+        return obj.arquivo.name.split('/')[-1] if obj.arquivo else None
+
+    def get_log_validacao(self, obj):
+        status_msg = {
+            'NOVO': 'Documento recebido, aguardando análise',
+            'VALIDADO': 'Documento validado com sucesso',
+            'REPROVADO': 'Documento reprovado. Verifique com o escritório.',
+        }
+        return status_msg.get(obj.status, 'Status desconhecido')
+
+    def validate_arquivo(self, value):
+        from backend.apps.intake.services import validate_file_extension, validate_file_size
+
+        is_valid, error = validate_file_extension(value.name)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+
+        is_valid, error = validate_file_size(value, max_size_mb=10)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+
+        return value
+
+
 class LoteExportacaoQuestorSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
 
