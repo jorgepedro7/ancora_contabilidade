@@ -1,6 +1,9 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 
 from backend.apps.core.models import ModelBaseEmpresa
+
+Usuario = get_user_model()
 
 
 class PortalCliente(ModelBaseEmpresa):
@@ -65,6 +68,11 @@ class DocumentoRecebido(ModelBaseEmpresa):
         ('VALIDADO', 'Validado'),
         ('REPROVADO', 'Reprovado'),
     ]
+    ORIGEM_CHOICES = [
+        ('BACKOFFICE', 'Backoffice'),
+        ('CLIENTE', 'Cliente'),
+        ('API', 'API'),
+    ]
 
     portal_cliente = models.ForeignKey(PortalCliente, on_delete=models.SET_NULL, blank=True, null=True, related_name='documentos')
     checklist = models.ForeignKey(ChecklistCompetencia, on_delete=models.SET_NULL, blank=True, null=True, related_name='documentos')
@@ -81,6 +89,13 @@ class DocumentoRecebido(ModelBaseEmpresa):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NOVO')
     log_validacao = models.JSONField(blank=True, null=True)
     observacoes = models.TextField(blank=True, null=True)
+
+    # Audit fields
+    enviado_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, null=True, blank=True, related_name='documentos_enviados', help_text='Usuário que enviou o documento')
+    validado_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, null=True, blank=True, related_name='documentos_validados', help_text='Usuário que validou o documento')
+    validado_em = models.DateTimeField(null=True, blank=True, help_text='Data e hora da validação')
+    origem_upload = models.CharField(max_length=20, choices=ORIGEM_CHOICES, default='BACKOFFICE', help_text='Origem do upload do documento')
+    referencia_cliente = models.TextField(null=True, blank=True, help_text='Referência ou identificador do cliente para o documento')
 
     class Meta:
         verbose_name = 'Documento Recebido'

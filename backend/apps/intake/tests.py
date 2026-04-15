@@ -159,3 +159,69 @@ class IntakeAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['errors'][0]['field'], 'arquivo')
+
+    def test_documento_recebido_with_audit_fields(self):
+        """Test that DocumentoRecebido can be created with all audit fields."""
+        from django.utils import timezone
+
+        validador = self.user_model.objects.create_user(
+            email='validador@example.com',
+            nome='Usuário Validador',
+            password='validpass123',
+        )
+
+        arquivo = SimpleUploadedFile('contrato.pdf', b'conteudo-teste', content_type='application/pdf')
+        agora = timezone.now()
+
+        documento = DocumentoRecebido.objects.create(
+            empresa=self.empresa,
+            titulo='Documento com Auditoria',
+            tipo_documento='GERAL',
+            tipo_entrega='UPLOAD',
+            competencia='2026-03-01',
+            arquivo=arquivo,
+            status='VALIDADO',
+            enviado_por=self.user,
+            validado_por=validador,
+            validado_em=agora,
+            origem_upload='BACKOFFICE',
+            referencia_cliente='REF-001-2026',
+        )
+
+        # Verify all fields are set and queryable
+        self.assertEqual(documento.enviado_por, self.user)
+        self.assertEqual(documento.validado_por, validador)
+        self.assertEqual(documento.validado_em, agora)
+        self.assertEqual(documento.origem_upload, 'BACKOFFICE')
+        self.assertEqual(documento.referencia_cliente, 'REF-001-2026')
+
+        # Verify document can be queried by audit fields
+        documento_encontrado = DocumentoRecebido.objects.get(enviado_por=self.user)
+        self.assertEqual(documento_encontrado.id, documento.id)
+
+        documento_encontrado = DocumentoRecebido.objects.get(validado_por=validador)
+        self.assertEqual(documento_encontrado.id, documento.id)
+
+    def test_documento_recebido_audit_fields_optional(self):
+        """Test that audit fields can be null."""
+        arquivo = SimpleUploadedFile('contrato.pdf', b'conteudo-teste', content_type='application/pdf')
+
+        documento = DocumentoRecebido.objects.create(
+            empresa=self.empresa,
+            titulo='Documento sem Auditoria',
+            tipo_documento='GERAL',
+            tipo_entrega='UPLOAD',
+            competencia='2026-03-01',
+            arquivo=arquivo,
+            status='NOVO',
+            enviado_por=None,
+            validado_por=None,
+            validado_em=None,
+            origem_upload='CLIENTE',
+            referencia_cliente=None,
+        )
+
+        self.assertIsNone(documento.enviado_por)
+        self.assertIsNone(documento.validado_por)
+        self.assertIsNone(documento.validado_em)
+        self.assertEqual(documento.origem_upload, 'CLIENTE')
