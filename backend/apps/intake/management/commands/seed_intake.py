@@ -62,11 +62,11 @@ class Command(BaseCommand):
         PerfilPermissao.objects.get_or_create(usuario=cliente, empresa=empresa, defaults={'perfil': 'CLIENTE'})
         self.stdout.write(f'Cliente: {cliente.email}')
 
-        # Portal
+        # Portal — lookup por empresa+slug para garantir que aponta para a empresa correta
         portal, _ = PortalCliente.objects.get_or_create(
             slug='portal-ancora',
+            empresa=empresa,
             defaults={
-                'empresa': empresa,
                 'email_responsavel': 'contato@ancora.local',
                 'telefone_responsavel': '(11) 3000-0000',
                 'recebe_alertas': True,
