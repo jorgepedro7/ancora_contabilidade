@@ -2,16 +2,22 @@
   <div class="p-4 space-y-6 max-w-5xl mx-auto">
     <!-- Cabeçalho -->
     <section class="bg-ancora-black/30 border border-ancora-gold/20 rounded-lg p-6">
-      <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Área do Cliente</p>
-      <h1 class="text-3xl font-display text-ancora-gold mb-2">
-        {{ portalConfig?.portal?.slug ? `Portal ${portalConfig.portal.slug}` : 'Portal do Cliente' }}
-      </h1>
-      <p class="text-white">
-        {{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Envie documentos para o escritório de contabilidade.' }}
-      </p>
-      <p v-if="portalConfig?.portal?.email_responsavel" class="text-sm text-gray-400 mt-2">
-        Responsável: {{ portalConfig.portal.email_responsavel }}
-      </p>
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm uppercase tracking-wide text-gray-500 mb-2">Área do Cliente</p>
+          <h1 class="text-3xl font-display text-ancora-gold mb-2">Portal do Cliente</h1>
+          <p class="text-white">
+            {{ empresaStore.activeEmpresa?.nome_fantasia || empresaStore.activeEmpresa?.razao_social || 'Envie documentos para o escritório de contabilidade.' }}
+          </p>
+        </div>
+        <button
+          type="button"
+          @click="authStore.logout()"
+          class="text-sm text-gray-400 hover:text-ancora-gold border border-gray-700 hover:border-ancora-gold/50 rounded px-3 py-1.5 whitespace-nowrap transition-colors"
+        >
+          Sair
+        </button>
+      </div>
       <p v-if="loadError" class="mt-3 text-sm text-red-300">{{ loadError }}</p>
     </section>
 
@@ -178,10 +184,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import IntakeService from '@/services/intake.service'
+import { useAuthStore } from '@/stores/auth'
 import { useEmpresaStore } from '@/stores/empresa'
 import { useUiStore } from '@/stores/ui'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const empresaStore = useEmpresaStore()
 const uiStore = useUiStore()
 
