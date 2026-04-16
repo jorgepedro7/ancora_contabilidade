@@ -21,7 +21,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-300">
         <div>
           <p class="text-xs uppercase tracking-wide text-gray-500">Tipos aceitos</p>
-          <p class="mt-1">{{ portalConfig.tipos_aceitos.join(', ') }}</p>
+          <p class="mt-1">{{ (portalConfig.tipos_documento_permitidos || []).map(t => t.label).join(', ') }}</p>
         </div>
         <div>
           <p class="text-xs uppercase tracking-wide text-gray-500">Extensões permitidas</p>
@@ -152,16 +152,10 @@
                 {{ doc.arquivo_nome }}
               </p>
               <p
-                v-if="doc.log_validacao && doc.log_validacao.length"
-                class="text-xs text-gray-400 mt-2 whitespace-pre-line"
+                v-if="doc.log_validacao"
+                class="text-xs text-gray-400 mt-2"
               >
-                <span
-                  v-for="(log, idx) in doc.log_validacao"
-                  :key="idx"
-                  class="block"
-                >
-                  • {{ log.mensagem || log }}
-                </span>
+                • {{ doc.log_validacao }}
               </p>
             </div>
             <span
@@ -231,9 +225,6 @@ async function loadPortal() {
   loadError.value = ''
   try {
     portalConfig.value = await IntakeService.getClientPortalConfig(slug.value)
-    if (!portalConfig.value.portal) {
-      loadError.value = `Portal "${slug.value}" não encontrado ou você não tem acesso.`
-    }
   } catch (error) {
     console.error(error)
     loadError.value = 'Não foi possível carregar a configuração do portal.'

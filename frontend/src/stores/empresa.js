@@ -32,6 +32,16 @@ export const useEmpresaStore = defineStore('empresa', () => {
       return activeEmpresa.value
     }
 
+    // CLIENTE não tem acesso ao endpoint de empresa — usa dados já presentes no JWT
+    if (authStore.user?.perfil_empresa === 'CLIENTE') {
+      const empresaFromJwt = {
+        id: authStore.user.empresa_ativa_id,
+        nome_fantasia: authStore.user.empresa_ativa_nome,
+      }
+      setActiveEmpresa(empresaFromJwt)
+      return empresaFromJwt
+    }
+
     const EmpresaService = (await import('@/services/empresas.service')).default
     const empresaData = await EmpresaService.getEmpresa(empresaId)
     setActiveEmpresa(empresaData)
