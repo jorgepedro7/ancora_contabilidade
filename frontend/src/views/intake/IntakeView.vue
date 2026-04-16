@@ -246,14 +246,14 @@
               </div>
             </div>
             <div
-              v-if="recebimento.status === 'REPROVADO' && authStore.user?.perfil_empresa !== 'CLIENTE'"
+              v-if="recebimento.status !== 'VALIDADO' && authStore.user?.perfil_empresa !== 'CLIENTE'"
               class="mt-3 flex gap-2"
             >
               <button @click="confirmarRecebimento(recebimento.id, 'VALIDADO')" class="px-3 py-1 text-xs bg-green-600 rounded hover:bg-green-500">
-                Confirmar validado
+                Validar
               </button>
               <button @click="confirmarRecebimento(recebimento.id, 'REPROVADO')" class="px-3 py-1 text-xs bg-red-700 rounded hover:bg-red-600">
-                Manter reprovado
+                Reprovar
               </button>
             </div>
           </div>
