@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -85,8 +84,7 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
     pode_cancelar_nf = serializers.SerializerMethodField()
     pode_ver_folha = serializers.SerializerMethodField()
 
-    PERFIS_EQUIPE = {'ADMIN', 'CONTADOR', 'AUXILIAR', 'FINANCEIRO', 'CONSULTA'}
-    PERFIS_VALIDOS = PERFIS_EQUIPE | {'CLIENTE'}
+    PERFIS_VALIDOS = {code for code, _ in PerfilPermissao.PERFIS_CHOICES}
 
     class Meta:
         model = Usuario
@@ -99,16 +97,19 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined', 'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha']
 
     def _get_perfil_obj(self, obj):
-        request = self.context.get('request')
-        if not request:
-            return None
-        empresa = getattr(request.user, 'empresa_ativa', None)
-        if not empresa:
-            return None
-        try:
-            return PerfilPermissao.objects.get(usuario=obj, empresa=empresa, ativo=True)
-        except PerfilPermissao.DoesNotExist:
-            return None
+        cache_attr = f'_perfil_cache_{obj.pk}'
+        if not hasattr(self, cache_attr):
+            request = self.context.get('request')
+            empresa = getattr(request.user, 'empresa_ativa', None) if request else None
+            if request and empresa:
+                try:
+                    result = PerfilPermissao.objects.get(usuario=obj, empresa=empresa, ativo=True)
+                except PerfilPermissao.DoesNotExist:
+                    result = None
+            else:
+                result = None
+            setattr(self, cache_attr, result)
+        return getattr(self, cache_attr)
 
     def get_perfil_empresa(self, obj):
         p = self._get_perfil_obj(obj)
