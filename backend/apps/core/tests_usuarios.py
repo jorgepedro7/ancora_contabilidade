@@ -59,3 +59,91 @@ class UsuarioGestaoSerializerTest(APITestCase):
         self.assertEqual(resp.data['perfil_empresa'], 'CONTADOR')
         self.assertTrue(User.objects.filter(email='novo@t.test').exists())
         self.assertTrue(PerfilPermissao.objects.filter(usuario__email='novo@t.test', perfil='CONTADOR').exists())
+
+    def test_cria_cliente_portal(self):
+        url = reverse('usuarios-list')
+        payload = {
+            'email': 'cliente@t.test',
+            'nome': 'Cliente Portal',
+            'perfil': 'CLIENTE',
+            'senha_temporaria': 'temp1234',
+        }
+        resp = self.client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data['perfil_empresa'], 'CLIENTE')
+
+    def test_lista_equipe_exclui_clientes(self):
+        _make_user('equipe@t.test', 'Equipe', self.empresa, 'CONTADOR')
+        _make_user('cliente@t.test', 'Cliente', self.empresa, 'CLIENTE')
+        url = reverse('usuarios-list') + '?tipo=equipe'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        emails = [u['email'] for u in resp.data['results']]
+        self.assertIn('equipe@t.test', emails)
+        self.assertNotIn('cliente@t.test', emails)
+
+    def test_lista_clientes_inclui_so_clientes(self):
+        _make_user('equipe@t.test', 'Equipe', self.empresa, 'CONTADOR')
+        _make_user('cliente@t.test', 'Cliente', self.empresa, 'CLIENTE')
+        url = reverse('usuarios-list') + '?tipo=cliente'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        emails = [u['email'] for u in resp.data['results']]
+        self.assertIn('cliente@t.test', emails)
+        self.assertNotIn('equipe@t.test', emails)
+
+    def test_edita_perfil(self):
+        membro = _make_user('membro@t.test', 'Membro', self.empresa, 'AUXILIAR')
+        url = reverse('usuarios-detail', args=[membro.id])
+        resp = self.client.patch(url, {'perfil': 'FINANCEIRO'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertEqual(
+            PerfilPermissao.objects.get(usuario=membro, empresa=self.empresa).perfil,
+            'FINANCEIRO',
+        )
+
+    def test_desativa_usuario(self):
+        membro = _make_user('membro2@t.test', 'Membro2', self.empresa, 'CONSULTA')
+        url = reverse('usuarios-detail', args=[membro.id])
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        membro.refresh_from_db()
+        self.assertFalse(membro.is_active)
+
+    def test_nao_pode_desativar_si_mesmo(self):
+        url = reverse('usuarios-detail', args=[self.admin.id])
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_contador_nao_pode_criar_usuario(self):
+        contador = _make_user('contador@t.test', 'Contador', self.empresa, 'CONTADOR')
+        token = _token(self.client, 'contador@t.test')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        url = reverse('usuarios-list')
+        resp = self.client.post(url, {'email': 'x@t.test', 'nome': 'X', 'perfil': 'CONSULTA', 'senha_temporaria': 'abc'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_isolamento_empresa(self):
+        """Admin de outra empresa não vê usuários desta empresa."""
+        from backend.apps.empresas.models import Empresa
+        outra_empresa = Empresa.objects.create(
+            razao_social='Outra Empresa',
+            nome_fantasia='Outra',
+            cnpj='98765432000199',
+            regime_tributario='LP',
+            cnae_principal='9999999',
+            cep='01001000',
+            logradouro='Av B',
+            numero='2',
+            bairro='Centro',
+            municipio='SP',
+            uf='SP',
+        )
+        outro_admin = _make_user('outro@t.test', 'Outro Admin', outra_empresa, 'ADMIN')
+        token = _token(self.client, 'outro@t.test')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        url = reverse('usuarios-list') + '?tipo=equipe'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        emails = [u['email'] for u in resp.data['results']]
+        self.assertNotIn('admin@t.test', emails)
