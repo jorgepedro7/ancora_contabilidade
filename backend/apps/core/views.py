@@ -5,6 +5,7 @@ from rest_framework import generics, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 from .serializers import CustomTokenObtainPairSerializer, UsuarioSerializer, UsuarioGestaoSerializer
 from .models import Usuario, PerfilPermissao
@@ -68,10 +69,19 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def _get_empresa(self):
         return garantir_empresa_padrao(self.request.user)
 
-    def _exigir_admin(self):
-        perfil = obter_perfil_empresa(self.request.user, self._get_empresa())
+    def _exigir_admin(self, empresa):
+        if getattr(self.request.user, 'is_superuser', False):
+            return
+        perfil = obter_perfil_empresa(self.request.user, empresa)
         if perfil is None or perfil.perfil != 'ADMIN':
             raise PermissionDenied('Apenas administradores podem gerenciar usuários.')
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        lookup = self.kwargs[self.lookup_field]
+        obj = get_object_or_404(queryset, pk=lookup)
+        # empresa isolation already enforced by get_queryset; skip generic object permission
+        return obj
 
     def get_queryset(self):
         empresa = self._get_empresa()
@@ -85,8 +95,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return Usuario.objects.filter(id__in=usuario_ids).order_by('nome')
 
     def perform_create(self, serializer):
-        self._exigir_admin()
         empresa = self._get_empresa()
+        self._exigir_admin(empresa)
         perfil = serializer.validated_data.pop('perfil')
         senha = serializer.validated_data.pop('senha_temporaria', None)
 
@@ -107,8 +117,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         serializer.instance = user
 
     def perform_update(self, serializer):
-        self._exigir_admin()
         empresa = self._get_empresa()
+        self._exigir_admin(empresa)
         user = serializer.instance
 
         if user == self.request.user:
@@ -122,8 +132,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             PerfilPermissao.objects.filter(usuario=user, empresa=empresa).update(perfil=novo_perfil)
 
     def perform_destroy(self, instance):
-        self._exigir_admin()
+        empresa = self._get_empresa()
+        self._exigir_admin(empresa)
         if instance == self.request.user:
             raise ValidationError({'detail': 'Você não pode desativar a si mesmo.'})
         instance.is_active = False
         instance.save(update_fields=['is_active'])
+        PerfilPermissao.objects.filter(usuario=instance, empresa=empresa).update(ativo=False)

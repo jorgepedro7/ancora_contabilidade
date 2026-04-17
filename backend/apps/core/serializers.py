@@ -94,7 +94,7 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
             'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha',
             'is_active', 'date_joined',
         ]
-        read_only_fields = ['id', 'date_joined', 'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha']
+        read_only_fields = ['id', 'date_joined', 'is_active', 'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha']
 
     def _get_perfil_obj(self, obj):
         cache_attr = f'_perfil_cache_{obj.pk}'
