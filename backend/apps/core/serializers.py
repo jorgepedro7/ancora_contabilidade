@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -74,3 +75,58 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Adiciona os dados do usuário ao payload de resposta do login
         data['user'] = UsuarioSerializer(self.user).data
         return data
+
+
+class UsuarioGestaoSerializer(serializers.ModelSerializer):
+    perfil = serializers.CharField(write_only=True)
+    senha_temporaria = serializers.CharField(write_only=True, required=False)
+    perfil_empresa = serializers.SerializerMethodField()
+    pode_emitir_nf = serializers.SerializerMethodField()
+    pode_cancelar_nf = serializers.SerializerMethodField()
+    pode_ver_folha = serializers.SerializerMethodField()
+
+    PERFIS_EQUIPE = {'ADMIN', 'CONTADOR', 'AUXILIAR', 'FINANCEIRO', 'CONSULTA'}
+    PERFIS_VALIDOS = PERFIS_EQUIPE | {'CLIENTE'}
+
+    class Meta:
+        model = Usuario
+        fields = [
+            'id', 'email', 'nome', 'telefone',
+            'perfil', 'senha_temporaria',
+            'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha',
+            'is_active', 'date_joined',
+        ]
+        read_only_fields = ['id', 'date_joined', 'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha']
+
+    def _get_perfil_obj(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return None
+        empresa = getattr(request.user, 'empresa_ativa', None)
+        if not empresa:
+            return None
+        try:
+            return PerfilPermissao.objects.get(usuario=obj, empresa=empresa, ativo=True)
+        except PerfilPermissao.DoesNotExist:
+            return None
+
+    def get_perfil_empresa(self, obj):
+        p = self._get_perfil_obj(obj)
+        return p.perfil if p else None
+
+    def get_pode_emitir_nf(self, obj):
+        p = self._get_perfil_obj(obj)
+        return p.pode_emitir_nf if p else False
+
+    def get_pode_cancelar_nf(self, obj):
+        p = self._get_perfil_obj(obj)
+        return p.pode_cancelar_nf if p else False
+
+    def get_pode_ver_folha(self, obj):
+        p = self._get_perfil_obj(obj)
+        return p.pode_ver_folha if p else False
+
+    def validate_perfil(self, value):
+        if value not in self.PERFIS_VALIDOS:
+            raise serializers.ValidationError(f'Perfil inválido. Escolha entre: {", ".join(sorted(self.PERFIS_VALIDOS))}')
+        return value
