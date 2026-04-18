@@ -127,6 +127,20 @@ class UsuarioGestaoSerializerTest(APITestCase):
         resp = self.client.post(url, {'email': 'x@t.test', 'nome': 'X', 'perfil': 'CONSULTA', 'senha_temporaria': 'abc'}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_reativa_usuario(self):
+        membro = _make_user('inativo@t.test', 'Inativo', self.empresa, 'CONSULTA')
+        # First deactivate
+        membro.is_active = False
+        membro.save(update_fields=['is_active'])
+        PerfilPermissao.objects.filter(usuario=membro, empresa=self.empresa).update(ativo=False)
+        # Reactivate via endpoint
+        url = reverse('usuarios-reativar', args=[membro.id])
+        resp = self.client.post(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        membro.refresh_from_db()
+        self.assertTrue(membro.is_active)
+        self.assertTrue(PerfilPermissao.objects.get(usuario=membro, empresa=self.empresa).ativo)
+
     def test_isolamento_empresa(self):
         """Admin de outra empresa não vê usuários desta empresa."""
         from backend.apps.empresas.models import Empresa

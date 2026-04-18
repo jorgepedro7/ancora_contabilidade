@@ -20,6 +20,10 @@ const UsuariosService = {
   deleteUsuario(id) {
     return api.delete(`/core/usuarios/${id}/`).then(r => r.data)
   },
+
+  reativarUsuario(id) {
+    return api.post(`/core/usuarios/${id}/reativar/`).then(r => r.data)
+  },
 }
 
 export default UsuariosService

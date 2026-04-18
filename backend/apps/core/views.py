@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
@@ -139,3 +140,16 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         instance.is_active = False
         instance.save(update_fields=['is_active'])
         PerfilPermissao.objects.filter(usuario=instance, empresa=empresa).update(ativo=False)
+
+    @action(detail=True, methods=['post'], url_path='reativar')
+    def reativar(self, request, pk=None):
+        empresa = self._get_empresa()
+        self._exigir_admin(empresa)
+        # Look up across all users linked to this empresa (including inactive)
+        usuario_ids = PerfilPermissao.objects.filter(empresa=empresa).values_list('usuario_id', flat=True)
+        instance = get_object_or_404(Usuario, pk=pk, id__in=usuario_ids)
+        instance.is_active = True
+        instance.save(update_fields=['is_active'])
+        PerfilPermissao.objects.filter(usuario=instance, empresa=empresa).update(ativo=True)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)

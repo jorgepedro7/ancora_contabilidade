@@ -223,6 +223,7 @@ function abrirModal(membro = null) {
 function fecharModal() {
   modalAberto.value = false
   editando.value = null
+  form.value = formVazio()
 }
 
 async function salvar() {
@@ -257,7 +258,8 @@ async function toggleAtivo(membro) {
   if (membro.is_active) {
     try {
       await UsuariosService.deleteUsuario(membro.id)
-      membro.is_active = false
+      const idx = membros.value.findIndex(m => m.id === membro.id)
+      if (idx !== -1) membros.value[idx] = { ...membros.value[idx], is_active: false }
       uiStore.showNotification('Usuário desativado.', 'success')
     } catch (error) {
       const msg =
@@ -268,11 +270,16 @@ async function toggleAtivo(membro) {
     }
   } else {
     try {
-      const updated = await UsuariosService.updateUsuario(membro.id, { is_active: true })
-      membro.is_active = updated.is_active
+      const updated = await UsuariosService.reativarUsuario(membro.id)
+      const idx = membros.value.findIndex(m => m.id === membro.id)
+      if (idx !== -1) membros.value[idx] = updated
       uiStore.showNotification('Usuário ativado.', 'success')
-    } catch {
-      uiStore.showNotification('Erro ao ativar usuário.', 'error')
+    } catch (error) {
+      const msg =
+        error?.response?.data?.errors?.[0]?.message ||
+        error?.response?.data?.message ||
+        'Erro ao ativar usuário.'
+      uiStore.showNotification(msg, 'error')
     }
   }
 }
