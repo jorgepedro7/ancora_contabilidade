@@ -154,6 +154,18 @@ const router = createRouter({
       component: () => import('../views/RelatorioView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/configuracoes/equipe',
+      name: 'equipe-list',
+      component: () => import('../views/configuracoes/EquipeView.vue'),
+      meta: { requiresAuth: true, requiresBackoffice: true }
+    },
+    {
+      path: '/configuracoes/clientes',
+      name: 'clientes-portal-list',
+      component: () => import('../views/configuracoes/ClientesPortalView.vue'),
+      meta: { requiresAuth: true, requiresBackoffice: true }
+    },
     // Rotas para as outras seções (Empresas, Clientes, etc.)
     // Serão adicionadas conforme o desenvolvimento avança
   ]

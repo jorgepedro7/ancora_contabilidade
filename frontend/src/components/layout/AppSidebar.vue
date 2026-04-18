@@ -43,10 +43,17 @@ const menuItems = [
     { name: 'Guias', icon: '🧾', path: '/obrigacoes/guias' },
   ], requiresEmpresa: true, requiresBackoffice: true },
   { name: 'Relatórios', icon: '📈', path: '/relatorios', requiresEmpresa: true, requiresBackoffice: true },
+  { name: 'Configurações', icon: '⚙️', children: [
+    { name: 'Equipe', icon: '👥', path: '/configuracoes/equipe' },
+    { name: 'Clientes do Portal', icon: '🔑', path: '/configuracoes/clientes' },
+  ], requiresEmpresa: true, requiresAdmin: true },
 ]
 
 function isItemVisible(item) {
   if (item.requiresBackoffice && authStore.user?.perfil_empresa === 'CLIENTE') {
+    return false
+  }
+  if (item.requiresAdmin && authStore.user?.perfil_empresa !== 'ADMIN') {
     return false
   }
   if (item.requiresEmpresa && !empresaStore.activeEmpresa) {
