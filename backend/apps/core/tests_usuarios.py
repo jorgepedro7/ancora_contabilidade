@@ -101,6 +101,7 @@ class UsuarioGestaoSerializerTest(APITestCase):
             PerfilPermissao.objects.get(usuario=membro, empresa=self.empresa).perfil,
             'FINANCEIRO',
         )
+        self.assertEqual(resp.data['perfil_empresa'], 'FINANCEIRO')
 
     def test_desativa_usuario(self):
         membro = _make_user('membro2@t.test', 'Membro2', self.empresa, 'CONSULTA')
@@ -109,6 +110,9 @@ class UsuarioGestaoSerializerTest(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         membro.refresh_from_db()
         self.assertFalse(membro.is_active)
+        self.assertFalse(
+            PerfilPermissao.objects.get(usuario=membro, empresa=self.empresa).ativo
+        )
 
     def test_nao_pode_desativar_si_mesmo(self):
         url = reverse('usuarios-detail', args=[self.admin.id])
@@ -147,3 +151,5 @@ class UsuarioGestaoSerializerTest(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         emails = [u['email'] for u in resp.data['results']]
         self.assertNotIn('admin@t.test', emails)
+        self.assertIn('outro@t.test', emails)  # outro_admin vê apenas sua própria empresa
+        self.assertEqual(len(resp.data['results']), 1)
