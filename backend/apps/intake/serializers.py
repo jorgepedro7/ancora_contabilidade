@@ -61,17 +61,24 @@ class DocumentoRecebidoSerializer(serializers.ModelSerializer):
     checklist_detail = ChecklistCompetenciaSerializer(source='checklist', read_only=True)
     arquivo_nome = serializers.SerializerMethodField()
     portal_cliente_slug = serializers.CharField(source='portal_cliente.slug', read_only=True)
+    enviado_por_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = DocumentoRecebido
         fields = '__all__'
         read_only_fields = [
             'id', 'empresa', 'hash_arquivo', 'status', 'log_validacao',
-            'criado_em', 'atualizado_em', 'checklist', 'checklist_detail', 'arquivo_nome', 'portal_cliente_slug'
+            'criado_em', 'atualizado_em', 'checklist', 'checklist_detail',
+            'arquivo_nome', 'portal_cliente_slug', 'enviado_por_nome',
         ]
 
     def get_arquivo_nome(self, obj):
         return obj.arquivo.name.split('/')[-1] if obj.arquivo else None
+
+    def get_enviado_por_nome(self, obj):
+        if obj.enviado_por_id:
+            return obj.enviado_por.nome or obj.enviado_por.email
+        return None
 
     def validate(self, attrs):
         empresa = obter_empresa_ativa_ou_erro(self.context['request'].user)

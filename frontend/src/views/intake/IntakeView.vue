@@ -233,9 +233,10 @@
                 <p class="text-sm text-gray-400">{{ recebimento.tipo_documento }} • {{ formatCompetencia(recebimento.competencia) }}</p>
                 <p class="text-xs text-gray-500 mt-1">
                   <span v-if="recebimento.origem_upload" class="inline-block bg-ancora-navy/40 px-2 py-0.5 rounded mr-2">{{ recebimento.origem_upload }}</span>
-                  <span v-if="recebimento.enviado_por" class="text-gray-400">Enviado por: {{ recebimento.enviado_por }}</span>
+                  <span v-if="recebimento.enviado_por_nome" class="text-gray-300 font-medium">{{ recebimento.enviado_por_nome }}</span>
+                  <span v-else-if="recebimento.enviado_por" class="text-gray-400">Enviado por: {{ recebimento.enviado_por }}</span>
                 </p>
-                <p v-if="recebimento.portal_cliente_slug" class="text-xs text-gray-500 mt-1">Área externa: {{ recebimento.portal_cliente_slug }}</p>
+                <p v-if="recebimento.portal_cliente_slug" class="text-xs text-gray-500 mt-1">Portal: <span class="font-mono">{{ recebimento.portal_cliente_slug }}</span></p>
                 <p class="text-xs text-gray-500 mt-1">{{ recebimento.arquivo_nome }}</p>
               </div>
               <div class="text-right">
