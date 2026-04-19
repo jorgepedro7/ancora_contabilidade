@@ -26,6 +26,7 @@
           <tr class="text-gray-500 text-xs uppercase tracking-wide">
             <th class="text-left px-4 py-3">Nome</th>
             <th class="text-left px-4 py-3">E-mail</th>
+            <th class="text-left px-4 py-3">Portal</th>
             <th class="text-left px-4 py-3">Status</th>
             <th class="text-left px-4 py-3">Entrada</th>
             <th class="px-4 py-3"></th>
@@ -39,6 +40,9 @@
           >
             <td class="px-4 py-3 text-white">{{ cliente.nome }}</td>
             <td class="px-4 py-3 text-gray-400">{{ cliente.email }}</td>
+            <td class="px-4 py-3 text-gray-400 font-mono text-xs">
+              {{ cliente.portal_cliente_slug || '—' }}
+            </td>
             <td class="px-4 py-3">
               <span
                 :class="cliente.is_active ? 'text-green-400' : 'text-gray-500'"
@@ -59,7 +63,7 @@
             </td>
           </tr>
           <tr v-if="!clientes.length">
-            <td colspan="5" class="px-4 py-6 text-center text-gray-500 text-sm">Nenhum cliente encontrado.</td>
+            <td colspan="6" class="px-4 py-6 text-center text-gray-500 text-sm">Nenhum cliente encontrado.</td>
           </tr>
         </tbody>
       </table>
@@ -101,6 +105,21 @@
               class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white"
             />
           </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Portal vinculado</label>
+            <select
+              v-model="form.portal_cliente"
+              class="w-full px-3 py-2 bg-ancora-black/70 border border-ancora-gold/20 rounded-md text-white"
+            >
+              <option value="">— Nenhum —</option>
+              <option v-for="p in portais" :key="p.id" :value="p.id">
+                {{ p.slug }}
+              </option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              Ao vincular um portal, o cliente acessa diretamente o link <span class="font-mono">/portal/:slug/login</span>.
+            </p>
+          </div>
           <div class="flex gap-2 justify-end pt-2">
             <button type="button" @click="fecharModal" class="px-4 py-2 text-sm text-gray-400 hover:text-white">
               Cancelar
@@ -121,45 +140,53 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import IntakeService from '@/services/intake.service'
 import UsuariosService from '@/services/usuarios.service'
 import { useUiStore } from '@/stores/ui'
 
 const uiStore = useUiStore()
 
 const clientes = ref([])
+const portais = ref([])
 const loading = ref(false)
 const modalAberto = ref(false)
 const salvando = ref(false)
-const form = ref({ nome: '', email: '', senha_temporaria: '' })
+const form = ref({ nome: '', email: '', senha_temporaria: '', portal_cliente: '' })
 
 onMounted(carregar)
 
 async function carregar() {
   loading.value = true
   try {
-    const resp = await UsuariosService.listClientes()
-    clientes.value = resp.results || resp || []
+    const [clientesResp, portaisResp] = await Promise.all([
+      UsuariosService.listClientes(),
+      IntakeService.getPortalClientes(),
+    ])
+    clientes.value = clientesResp.results || clientesResp || []
+    portais.value = portaisResp.results || portaisResp || []
   } catch {
-    uiStore.showNotification('Erro ao carregar clientes.', 'error')
+    uiStore.showNotification('Erro ao carregar dados.', 'error')
   } finally {
     loading.value = false
   }
 }
 
 function abrirModal() {
-  form.value = { nome: '', email: '', senha_temporaria: '' }
+  form.value = { nome: '', email: '', senha_temporaria: '', portal_cliente: '' }
   modalAberto.value = true
 }
 
 function fecharModal() {
   modalAberto.value = false
-  form.value = { nome: '', email: '', senha_temporaria: '' }
+  form.value = { nome: '', email: '', senha_temporaria: '', portal_cliente: '' }
 }
 
 async function salvar() {
   salvando.value = true
   try {
-    const created = await UsuariosService.createUsuario({ ...form.value, perfil: 'CLIENTE' })
+    const payload = { ...form.value, perfil: 'CLIENTE' }
+    if (!payload.portal_cliente) delete payload.portal_cliente
+    const created = await UsuariosService.createUsuario(payload)
     clientes.value = [created, ...clientes.value]
     uiStore.showNotification('Cliente adicionado.', 'success')
     fecharModal()
