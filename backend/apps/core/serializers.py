@@ -85,10 +85,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UsuarioGestaoSerializer(serializers.ModelSerializer):
     perfil = serializers.CharField(write_only=True)
     senha_temporaria = serializers.CharField(write_only=True, required=False)
+    portal_cliente = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     perfil_empresa = serializers.SerializerMethodField()
     pode_emitir_nf = serializers.SerializerMethodField()
     pode_cancelar_nf = serializers.SerializerMethodField()
     pode_ver_folha = serializers.SerializerMethodField()
+    portal_cliente_slug = serializers.SerializerMethodField()
 
     PERFIS_VALIDOS = {code for code, _ in PerfilPermissao.PERFIS_CHOICES}
 
@@ -96,11 +98,16 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'email', 'nome', 'telefone',
-            'perfil', 'senha_temporaria',
+            'perfil', 'senha_temporaria', 'portal_cliente',
             'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha',
+            'portal_cliente_slug',
             'is_active', 'date_joined',
         ]
-        read_only_fields = ['id', 'email', 'date_joined', 'is_active', 'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha']
+        read_only_fields = [
+            'id', 'email', 'date_joined', 'is_active',
+            'perfil_empresa', 'pode_emitir_nf', 'pode_cancelar_nf', 'pode_ver_folha',
+            'portal_cliente_slug',
+        ]
 
     def _get_perfil_obj(self, obj):
         cache_attr = f'_perfil_cache_{obj.pk}'
@@ -109,7 +116,9 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
             empresa = getattr(request.user, 'empresa_ativa', None) if request else None
             if request and empresa:
                 try:
-                    result = PerfilPermissao.objects.get(usuario=obj, empresa=empresa, ativo=True)
+                    result = PerfilPermissao.objects.select_related('portal_cliente').get(
+                        usuario=obj, empresa=empresa, ativo=True
+                    )
                 except PerfilPermissao.DoesNotExist:
                     result = None
             else:
@@ -133,7 +142,15 @@ class UsuarioGestaoSerializer(serializers.ModelSerializer):
         p = self._get_perfil_obj(obj)
         return p.pode_ver_folha if p else False
 
+    def get_portal_cliente_slug(self, obj):
+        p = self._get_perfil_obj(obj)
+        if p and p.portal_cliente_id:
+            return p.portal_cliente.slug
+        return None
+
     def validate_perfil(self, value):
         if value not in self.PERFIS_VALIDOS:
-            raise serializers.ValidationError(f'Perfil inválido. Escolha entre: {", ".join(sorted(self.PERFIS_VALIDOS))}')
+            raise serializers.ValidationError(
+                f'Perfil inválido. Escolha entre: {", ".join(sorted(self.PERFIS_VALIDOS))}'
+            )
         return value

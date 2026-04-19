@@ -100,6 +100,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         self._exigir_admin(empresa)
         perfil = serializer.validated_data.pop('perfil')
         senha = serializer.validated_data.pop('senha_temporaria', None)
+        portal_cliente_id = serializer.validated_data.pop('portal_cliente', None)
 
         with transaction.atomic():
             user = Usuario(
@@ -113,7 +114,17 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             else:
                 user.set_unusable_password()
             user.save()
-            PerfilPermissao.objects.create(usuario=user, empresa=empresa, perfil=perfil)
+
+            perfil_kwargs = {'usuario': user, 'empresa': empresa, 'perfil': perfil}
+            if portal_cliente_id:
+                from backend.apps.intake.models import PortalCliente
+                try:
+                    portal = PortalCliente.objects.get(id=portal_cliente_id, empresa=empresa)
+                    perfil_kwargs['portal_cliente'] = portal
+                except PortalCliente.DoesNotExist:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError({'portal_cliente': 'Portal não encontrado nesta empresa.'})
+            PerfilPermissao.objects.create(**perfil_kwargs)
 
         serializer.instance = user
 
@@ -121,16 +132,24 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         empresa = self._get_empresa()
         self._exigir_admin(empresa)
         user = serializer.instance
-
         if user == self.request.user:
             raise ValidationError({'detail': 'Você não pode alterar o próprio perfil.'})
-
         novo_perfil = serializer.validated_data.pop('perfil', None)
         serializer.validated_data.pop('senha_temporaria', None)
+        portal_cliente_id = serializer.validated_data.pop('portal_cliente', None)
         serializer.save()
-
+        update_kwargs = {}
         if novo_perfil:
-            PerfilPermissao.objects.filter(usuario=user, empresa=empresa).update(perfil=novo_perfil)
+            update_kwargs['perfil'] = novo_perfil
+        if portal_cliente_id is not None:
+            from backend.apps.intake.models import PortalCliente
+            try:
+                portal = PortalCliente.objects.get(id=portal_cliente_id, empresa=empresa)
+                update_kwargs['portal_cliente'] = portal
+            except PortalCliente.DoesNotExist:
+                raise ValidationError({'portal_cliente': 'Portal não encontrado nesta empresa.'})
+        if update_kwargs:
+            PerfilPermissao.objects.filter(usuario=user, empresa=empresa).update(**update_kwargs)
 
     def perform_destroy(self, instance):
         empresa = self._get_empresa()

@@ -176,6 +176,48 @@ class UsuarioGestaoSerializerTest(APITestCase):
         payload = jwt.decode(token_resp.data['access'], options={'verify_signature': False})
         self.assertEqual(payload.get('portal_cliente_slug'), 'acme-portal')
 
+    def test_cria_cliente_com_portal(self):
+        """Criar CLIENTE vinculando portal_cliente — o PerfilPermissao fica com portal_cliente preenchido."""
+        from backend.apps.intake.models import PortalCliente
+        from backend.apps.empresas.models import Empresa
+        empresa = Empresa.objects.create(
+            razao_social='Empresa CP',
+            nome_fantasia='CP',
+            cnpj='22222222000188',
+            regime_tributario='SN',
+            cnae_principal='1234567',
+            cep='01001000',
+            logradouro='Rua A',
+            numero='1',
+            bairro='Centro',
+            municipio='São Paulo',
+            uf='SP',
+        )
+        admin = _make_user('admin_cp@test.com', 'Admin CP', empresa, 'ADMIN')
+        token = _token(self.client, 'admin_cp@test.com')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        portal = PortalCliente.objects.create(
+            empresa=empresa,
+            slug='test-portal',
+            email_responsavel='p@test.com',
+        )
+        resp = self.client.post(
+            '/api/core/usuarios/',
+            {
+                'nome': 'Cliente Portal',
+                'email': 'cportal@test.com',
+                'senha_temporaria': 'senha123',
+                'perfil': 'CLIENTE',
+                'portal_cliente': str(portal.id),
+            },
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        from backend.apps.core.models import PerfilPermissao, Usuario
+        u = Usuario.objects.get(email='cportal@test.com')
+        p = PerfilPermissao.objects.get(usuario=u, empresa=empresa)
+        self.assertEqual(str(p.portal_cliente_id), str(portal.id))
+
     def test_isolamento_empresa(self):
         """Admin de outra empresa não vê usuários desta empresa."""
         from backend.apps.empresas.models import Empresa
