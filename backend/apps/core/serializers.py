@@ -12,13 +12,16 @@ def montar_contexto_empresa_ativa(user):
         'empresa_ativa_nome': empresa.nome_exibicao if empresa else None,
         'perfil_empresa': None,
         'permissoes': {},
+        'portal_cliente_slug': None,
     }
 
     if not empresa:
         return contexto
 
     try:
-        perfil_empresa = PerfilPermissao.objects.get(usuario=user, empresa=empresa, ativo=True)
+        perfil_empresa = PerfilPermissao.objects.select_related('portal_cliente').get(
+            usuario=user, empresa=empresa, ativo=True
+        )
     except PerfilPermissao.DoesNotExist:
         return contexto
 
@@ -28,6 +31,8 @@ def montar_contexto_empresa_ativa(user):
         'pode_cancelar_nf': perfil_empresa.pode_cancelar_nf,
         'pode_ver_folha': perfil_empresa.pode_ver_folha,
     }
+    if perfil_empresa.portal_cliente_id:
+        contexto['portal_cliente_slug'] = perfil_empresa.portal_cliente.slug
     return contexto
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -65,6 +70,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['empresa_ativa_nome'] = contexto_empresa['empresa_ativa_nome']
         token['perfil_empresa'] = contexto_empresa['perfil_empresa']
         token['permissoes'] = contexto_empresa['permissoes']
+        token['portal_cliente_slug'] = contexto_empresa['portal_cliente_slug']
 
         return token
 

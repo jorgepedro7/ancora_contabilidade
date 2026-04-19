@@ -88,6 +88,13 @@ class PerfilPermissao(ModelBaseEmpresa):
     pode_cancelar_nf = models.BooleanField(default=False)
     pode_ver_folha = models.BooleanField(default=False)
     # Adicione mais permissões conforme necessário
+    portal_cliente = models.ForeignKey(
+        'intake.PortalCliente',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='usuarios_clientes',
+    )
 
     class Meta:
         verbose_name = 'Perfil de Permissão'

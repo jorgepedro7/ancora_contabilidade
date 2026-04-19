@@ -141,6 +141,41 @@ class UsuarioGestaoSerializerTest(APITestCase):
         self.assertTrue(membro.is_active)
         self.assertTrue(PerfilPermissao.objects.get(usuario=membro, empresa=self.empresa).ativo)
 
+    def test_portal_slug_no_jwt(self):
+        """portal_cliente_slug aparece no JWT quando o CLIENTE tem portal vinculado."""
+        from backend.apps.intake.models import PortalCliente
+        from backend.apps.empresas.models import Empresa
+        empresa = Empresa.objects.create(
+            razao_social='Empresa Portal',
+            nome_fantasia='Portal',
+            cnpj='11111111000191',
+            regime_tributario='SN',
+            cnae_principal='1234567',
+            cep='01001000',
+            logradouro='Rua A',
+            numero='1',
+            bairro='Centro',
+            municipio='São Paulo',
+            uf='SP',
+        )
+        portal = PortalCliente.objects.create(
+            empresa=empresa,
+            slug='acme-portal',
+            email_responsavel='p@acme.com',
+        )
+        cliente = _make_user('portal_jwt@test.com', 'Portal JWT', empresa, 'CLIENTE')
+        from backend.apps.core.models import PerfilPermissao
+        PerfilPermissao.objects.filter(usuario=cliente, empresa=empresa).update(portal_cliente=portal)
+
+        token_resp = self.client.post(reverse('token_obtain_pair'), {
+            'email': 'portal_jwt@test.com',
+            'password': 'senha123',
+        }, format='json')
+        self.assertEqual(token_resp.status_code, 200)
+        import jwt
+        payload = jwt.decode(token_resp.data['access'], options={'verify_signature': False})
+        self.assertEqual(payload.get('portal_cliente_slug'), 'acme-portal')
+
     def test_isolamento_empresa(self):
         """Admin de outra empresa não vê usuários desta empresa."""
         from backend.apps.empresas.models import Empresa
