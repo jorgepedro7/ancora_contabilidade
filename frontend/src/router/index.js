@@ -166,6 +166,12 @@ const router = createRouter({
       component: () => import('../views/configuracoes/ClientesPortalView.vue'),
       meta: { requiresAuth: true, requiresBackoffice: true, requiresAdmin: true }
     },
+    {
+      path: '/portal/:slug/login',
+      name: 'portal-login',
+      component: () => import('../views/portal/PortalLoginView.vue'),
+      meta: { requiresGuest: true }
+    },
     // Rotas para as outras seções (Empresas, Clientes, etc.)
     // Serão adicionadas conforme o desenvolvimento avança
   ]
@@ -194,8 +200,22 @@ router.beforeEach((to, from, next) => {
   const isCliente = perfil === 'CLIENTE'
   const isBackoffice = perfil !== null && perfil !== 'CLIENTE'
 
-  // CLIENTE tentando /login → portal
+  // Usuário autenticado tentando rota de guest (portal/:slug/login) → redirecionar
+  if (isAuthenticated && to.meta.requiresGuest) {
+    if (isCliente) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const portalSlug = user.portal_cliente_slug
+      if (portalSlug) return next(`/area_cliente/${portalSlug}`)
+      return next('/area_cliente/portal')
+    }
+    return next('/')
+  }
+
+  // CLIENTE tentando /login → portal correto
   if (isCliente && to.name === 'login') {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const portalSlug = user.portal_cliente_slug
+    if (portalSlug) return next(`/area_cliente/${portalSlug}`)
     return next('/area_cliente/portal')
   }
 
@@ -206,6 +226,9 @@ router.beforeEach((to, from, next) => {
 
   // CLIENTE na raiz (dashboard) → portal
   if (isCliente && to.name === 'dashboard') {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const portalSlug = user.portal_cliente_slug
+    if (portalSlug) return next(`/area_cliente/${portalSlug}`)
     return next('/area_cliente/portal')
   }
 

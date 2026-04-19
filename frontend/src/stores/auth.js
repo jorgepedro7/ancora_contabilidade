@@ -49,6 +49,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    const currentUser = user.value
+    const perfil = currentUser?.perfil_empresa
+    const portalSlug = currentUser?.portal_cliente_slug
+
     user.value = null
     accessToken.value = null
     refreshToken.value = null
@@ -59,7 +63,11 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
     localStorage.removeItem('active_empresa')
 
-    router.push('/login') // Redireciona para a página de login
+    if (perfil === 'CLIENTE' && portalSlug) {
+      router.push(`/portal/${portalSlug}/login`)
+    } else {
+      router.push('/login')
+    }
   }
 
   async function refreshAccessToken() {
