@@ -103,7 +103,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             user = Usuario(
-                email=serializer.validated_data['email'],
+                email=self.request.data.get('email', ''),
                 nome=serializer.validated_data['nome'],
                 telefone=serializer.validated_data.get('telefone', ''),
                 empresa_ativa=empresa,

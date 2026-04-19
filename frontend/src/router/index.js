@@ -158,13 +158,13 @@ const router = createRouter({
       path: '/configuracoes/equipe',
       name: 'equipe-list',
       component: () => import('../views/configuracoes/EquipeView.vue'),
-      meta: { requiresAuth: true, requiresBackoffice: true }
+      meta: { requiresAuth: true, requiresBackoffice: true, requiresAdmin: true }
     },
     {
       path: '/configuracoes/clientes',
       name: 'clientes-portal-list',
       component: () => import('../views/configuracoes/ClientesPortalView.vue'),
-      meta: { requiresAuth: true, requiresBackoffice: true }
+      meta: { requiresAuth: true, requiresBackoffice: true, requiresAdmin: true }
     },
     // Rotas para as outras seções (Empresas, Clientes, etc.)
     // Serão adicionadas conforme o desenvolvimento avança
@@ -217,6 +217,11 @@ router.beforeEach((to, from, next) => {
   // Backoffice tentando rota de cliente → intake
   if (isBackoffice && to.meta.requiresCliente) {
     return next('/intake')
+  }
+
+  // Não-ADMIN tentando rota de admin → dashboard
+  if (to.meta.requiresAdmin && perfil !== 'ADMIN') {
+    return next('/')
   }
 
   next()
